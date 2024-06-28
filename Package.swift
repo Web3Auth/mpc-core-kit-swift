@@ -17,7 +17,8 @@ let package = Package(
         .package(url: "https://github.com/torusresearch/tss-client-swift.git", from: "4.0.0"),
         .package(url: "https://github.com/tkey/tkey-mpc-swift", from: "3.0.1"),
         .package(url: "https://github.com/torusresearch/customauth-swift-sdk", from: "10.0.1"),
-        .package(url: "https://github.com/Web3Auth/single-factor-auth-swift", from: "5.0.0")
+        .package(url: "https://github.com/Web3Auth/single-factor-auth-swift", from: "5.0.0"),
+        .package(url: "https://github.com/auth0/JWTDecode.swift", from: "3.1.0")
     ],
     
     targets: [
@@ -30,6 +31,7 @@ let package = Package(
                 .product(name: "SingleFactorAuth", package: "single-factor-auth-swift"),
                 .product(name: "tkey", package: "tkey-mpc-swift" ),
                 .product(name: "tssClientSwift", package: "tss-client-swift" ),
+                .product(name: "JWTDecode", package: "JWTDecode.swift")
             ]
         ),
         .testTarget(

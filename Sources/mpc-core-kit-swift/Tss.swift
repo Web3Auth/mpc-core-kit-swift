@@ -1,84 +1,62 @@
-//
-//  File.swift
-//  
-//
-//  Created by CW Lee on 19/01/2024.
-//
-
-import Foundation
-import CustomAuth
-import TorusUtils
-import tssClientSwift
-import tkey
-#if canImport(curveSecp256k1)
-import curveSecp256k1
-#endif
-
 import BigInt
 import UIKit
+import CustomAuth
+import Foundation
+import TorusUtils
+import tssClientSwift
+
+#if canImport(tkey)
+    import tkey
+#endif
+
+#if canImport(curveSecp256k1)
+    import curveSecp256k1
+#endif
 
 extension MpcCoreKit {
-    
-    public func getTssPubKey () async throws -> Data {
-        guard let threshold_key = self.tkey else {
-            throw "Invalid tkey"
+    public func getTssPubKey() async throws -> Data {
+        guard let threshold_key = tkey else {
+            throw CoreKitError.invalidTKey
+        }
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
         }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
         let result = try await TssModule.get_tss_pub_key(threshold_key: threshold_key, tss_tag: selectedTag)
         return Data(hex: result)
     }
-    
-    
-    public func getTssPubKey () -> Data {
-        
-        let semaphore = DispatchSemaphore(value: 0)
-        var result : Data?
-        performAsyncOperation(completion: { myresult  in
-            result = myresult
-            semaphore.signal()
-        })
-        semaphore.wait()
-        return result ?? Data([])
-    }
-    
-    
-    func performAsyncOperation(completion: @escaping (Data) -> Void) {
-        Task {
-            // Simulate an asynchronous operation
-            let result = try await self.getTssPubKey()
-            print (result)
-            completion(result)
-        }
-    }
-    
+
     /// Signing Data without hashing
     public func tssSign(message: Data) async throws -> Data {
-        guard let authSigs = self.authSigs else {
-            throw TSSClientError("Invalid authSigns")
+        guard let authSigs = authSigs else {
+            throw CoreKitError.invalidAuthSignatures
         }
-        
-        guard let tkey = self.tkey else {
-            throw TSSClientError("invalid tkey")
+
+        guard let tkey = tkey else {
+            throw CoreKitError.invalidTKey
         }
-        
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
+        }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
         // Create tss Client using helper
-        
-        let (client, coeffs) = try await self.bootstrapTssClient( selected_tag: selectedTag)
 
-        
+        let (client, coeffs) = try await bootstrapTssClient(selected_tag: selectedTag)
+
         // Wait for sockets to be connected
         let connected = try client.checkConnected()
-        if !(connected) {
-            throw "Client not connected"
+        if !connected {
+            throw TSSClientError("Client not connected")
         }
 
         let precompute = try client.precompute(serverCoeffs: coeffs, signatures: authSigs)
         let ready = try client.isReady()
-        if !(ready) {
-            throw RuntimeError("Error, client not ready")
+        if !ready {
+            throw TSSClientError("Error, client not ready")
         }
-        
+
         let signingMessage = message.base64EncodedString()
         let (s, r, v) = try! client.sign(message: signingMessage, hashOnly: true, original_message: "", precompute: precompute, signatures: authSigs)
 
@@ -86,47 +64,20 @@ extension MpcCoreKit {
 
         return r.magnitude.serialize() + s.magnitude.serialize() + Data([v])
     }
-    
-    public func tssSign (message: Data) throws -> Data {
-        
-        let semaphore = DispatchSemaphore(value: 0)
-        var result : Data?
-        performAsyncTssSignOperation(message: message, completion: { myresult  in
-            result = myresult
-            semaphore.signal()
-        })
-        let _ = semaphore.wait(timeout: .now() + 100_000_000_000)
-        
-        //gepoubkey
-        guard let signature = result else {
-            throw RuntimeError("Failed to sign the message")
+
+    public func getAllFactorPubs() async throws -> [String] {
+        guard let threshold_key = tkey else {
+            throw CoreKitError.invalidTKey
         }
         
-        return signature
-    }
-    
-    func performAsyncTssSignOperation(message:Data,  completion: @escaping (Data) -> Void) {
-        Task {
-            do {
-                // Simulate an asynchronous operation
-                let result = try await self.tssSign(message: message )
-                completion(result)
-            }catch {
-                completion(Data())
-            }
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
         }
-    }
-    
-    public func getAllFactorPubs () async throws -> [String] {
-        guard let threshold_key = self.tkey else {
-            throw "tkey is not available"
-        }
-        
         let currentTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
         return try await TssModule.get_all_factor_pub(threshold_key: threshold_key, tss_tag: currentTag)
     }
-    
-    
+
     /// * A BN used for encrypting your Device/ Recovery TSS Key Share. You can generate it using `generateFactorKey()` function or use an existing one.
     ///
     /// factorKey?: BN;
@@ -135,155 +86,171 @@ extension MpcCoreKit {
     /// shareDescription?: FactorKeyTypeShareDescription;
     ///  * Additional metadata information you want to be stored alongside this factor for easy identification.
     /// additionalMetadata?: Record<string, string>;
-    public func createFactor( tssShareIndex: TssShareType, factorKey: String?, factorDescription: FactorDescriptionTypeModule, additionalMetadata: [String: Any] = [:]) async throws -> String {
+    public func createFactor(tssShareIndex: TssShareType, factorKey: String?, factorDescription: FactorType, additionalMetadata: [String: Any] = [:]) async throws -> String {
         // check for index is same as factor key
-        guard let threshold_key = self.tkey else {
-            throw "Invalid tkey"
+        guard let threshold_key = tkey else {
+            throw CoreKitError.invalidTKey
         }
         guard let curFactorKey = self.factorKey else {
-            throw "invalid current FactorKey"
+            throw CoreKitError.invalidFactorKey
         }
-        
+
         let newFactor = try factorKey ?? curveSecp256k1.SecretKey().serialize()
-        
+
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
+        }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        print(selectedTag,"selected tag")
-        let (tssIndex, _ ) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: curFactorKey)
+        print(selectedTag, "selected tag")
+        let (tssIndex, _) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: curFactorKey)
         // create new factor if different index
-        if ( tssIndex == tssShareIndex.toString()) {
-            try await self.copyFactor(newFactorKey: newFactor, tssShareIndex: tssShareIndex)
+        if tssIndex == String(tssShareIndex.rawValue) {
+            try await copyFactor(newFactorKey: newFactor, tssShareIndex: tssShareIndex)
         } else {
             // copy if same index
-            try await self.addNewFactor(newFactorKey: newFactor, tssShareIndex: tssShareIndex)
+            try await addNewFactor(newFactorKey: newFactor, tssShareIndex: tssShareIndex)
         }
-        
+
         // backup metadata share using factorKey
-        let shareIndex = try self.getDeviceMetadataShareIndex()
+        let shareIndex = try getDeviceMetadataShareIndex()
         try TssModule.backup_share_with_factor_key(threshold_key: threshold_key, shareIndex: shareIndex, factorKey: newFactor)
-        
+
         // update description
-        let description = createCoreKitFactorDescription(module: FactorDescriptionTypeModule.HashedShare, tssIndex: tssShareIndex)
+        let description = createCoreKitFactorDescription(module: FactorType.HashedShare, tssIndex: tssShareIndex)
         let jsonStr = try factorDescriptionToJsonStr(dataObj: description)
         let factorPub = try curveSecp256k1.SecretKey(hex: newFactor).toPublic().serialize(compressed: true)
-        try await threshold_key.add_share_description(key: factorPub, description: jsonStr )
-        
+        try await threshold_key.add_share_description(key: factorPub, description: jsonStr)
+
         return newFactor
     }
-    
-    public func deleteFactor ( deleteFactorPub: String, deleteFactorKey: String? = nil) async throws {
-        guard let threshold_key = self.tkey, let factorKey = self.factorKey, let sigs = self.authSigs else {
-            throw "Invalid tkey"
+
+    public func deleteFactor(deleteFactorPub: String, deleteFactorKey: String? = nil) async throws {
+        guard let threshold_key = tkey, let factorKey = factorKey, let sigs = authSigs else {
+            throw CoreKitError.invalidTKey
+        }
+        
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
         }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        
-        
+
         try await TssModule.delete_factor_pub(threshold_key: threshold_key, tss_tag: selectedTag, factor_key: factorKey, auth_signatures: sigs, delete_factor_pub: deleteFactorPub, nodeDetails: nodeDetails!, torusUtils: torusUtils)
-        
+
         // delete backup metadata share with factorkey
         if let deleteFactorKey = deleteFactorKey {
             let factorkey = try curveSecp256k1.SecretKey(hex: deleteFactorKey)
             if try factorkey.toPublic().serialize(compressed: true) != curveSecp256k1.PublicKey(hex: deleteFactorPub).serialize(compressed: true) {
                 // unmatch public key
-                throw "unmatch factorPub and factor key"
+                throw CoreKitError.factorKeyAndFactorPubMismatch
             }
             // set metadata to Not Found
-            try await self.tkey?.storage_layer_set_metadata(private_key: deleteFactorKey, json: "{ \"message\": \"KEY_NOT_FOUND\" }")
+            try await tkey?.storage_layer_set_metadata(private_key: deleteFactorKey, json: "{ \"message\": \"KEY_NOT_FOUND\" }")
         }
     }
-    
-    private func copyFactor ( newFactorKey: String, tssShareIndex: TssShareType ) async throws {
-        guard let threshold_key = self.tkey, let factorKey = self.factorKey else {
-            throw "Invalid tkey"
+
+    private func copyFactor(newFactorKey: String, tssShareIndex: TssShareType) async throws {
+        guard let threshold_key = tkey, let factorKey = factorKey else {
+            throw CoreKitError.invalidTKey
+        }
+        
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
         }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        
+
         let newkey = try curveSecp256k1.SecretKey(hex: newFactorKey)
         let newFactorPub = try newkey.toPublic().serialize(compressed: true)
-        
+
         // backup metadata share with factorkey
-        let shareIndex = try self.getDeviceMetadataShareIndex()
+        let shareIndex = try getDeviceMetadataShareIndex()
         try TssModule.backup_share_with_factor_key(threshold_key: threshold_key, shareIndex: shareIndex, factorKey: newFactorKey)
-        
-        try await TssModule.copy_factor_pub(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey, newFactorPub: newFactorPub, tss_index: tssShareIndex.toInt32())
+
+        try await TssModule.copy_factor_pub(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey, newFactorPub: newFactorPub, tss_index: tssShareIndex.rawValue)
     }
-    
-    private func addNewFactor ( newFactorKey: String, tssShareIndex: TssShareType ) async throws {
-        guard let threshold_key = self.tkey, let factorKey = self.factorKey, let sigs = self.authSigs else {
-            throw "Invalid tkey"
+
+    private func addNewFactor(newFactorKey: String, tssShareIndex: TssShareType) async throws {
+        guard let threshold_key = tkey, let factorKey = factorKey, let sigs = authSigs else {
+            throw CoreKitError.invalidTKey
+        }
+        
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
         }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        
+
         let newkey = try curveSecp256k1.SecretKey(hex: newFactorKey)
         let newFactorPub = try newkey.toPublic().serialize(compressed: true)
-        
+
         // backup metadata share with factorkey
-        let shareIndex = try self.getDeviceMetadataShareIndex()
+        let shareIndex = try getDeviceMetadataShareIndex()
         try TssModule.backup_share_with_factor_key(threshold_key: threshold_key, shareIndex: shareIndex, factorKey: newFactorKey)
-        
-        try await TssModule.add_factor_pub(threshold_key: threshold_key, tss_tag: selectedTag, factor_key: factorKey, auth_signatures: sigs, new_factor_pub: newFactorPub, new_tss_index: tssShareIndex.toInt32(), nodeDetails: nodeDetails!, torusUtils: torusUtils)
+
+        try await TssModule.add_factor_pub(threshold_key: threshold_key, tss_tag: selectedTag, factor_key: factorKey, auth_signatures: sigs, new_factor_pub: newFactorPub, new_tss_index: tssShareIndex.rawValue, nodeDetails: nodeDetails!, torusUtils: torusUtils)
     }
-    
-    public mutating func enableMFA ( enableMFA : enableMFARecoveryFactor = .init()) async throws {
-        if self.appState.metadataPubKey == nil {
-            throw "invalid metadataPubKey"
+
+    public func enableMFA(enableMFA: MFARecoveryFactor = MFARecoveryFactor()) async throws {
+        if appState.metadataPubKey == nil {
+            throw CoreKitError.invalidMetadataPubKey
         }
-        
-        let hashFactorKey = try self.getHashKey()
-        let currentFactor = try self.getCurrentFactorKey()
-        
-        if ( currentFactor != hashFactorKey ) {
-            throw RuntimeError("Current factorKey should be HashFactor")
+
+        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: oauthKey!, clientID: option.Web3AuthClientId)
+        let currentFactor = try getCurrentFactorKey()
+
+        if currentFactor != hashFactorKey {
+            throw CoreKitError.currentFactorNotHashFactor
         }
-        
+
         let additionalDeviceMetadata = await [
-            "device" : UIDevice.current.model,
-            "name" : UIDevice.current.name
+            "device": UIDevice.current.model,
+            "name": UIDevice.current.name,
         ]
-        let deviceFactor = try await self.createFactor(tssShareIndex: .DEVICE, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: additionalDeviceMetadata)
-        
+        let deviceFactor = try await createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: additionalDeviceMetadata)
+
         // store to device
-        try await self.setDeviceFactor(factorKey: deviceFactor)
-        try await self.inputFactor(factorKey: deviceFactor)
-        
-        
+        try await setDeviceFactor(factorKey: deviceFactor)
+        try await inputFactor(factorKey: deviceFactor)
+
         // delete hash factor key
         let hashFactorPub = try curveSecp256k1.SecretKey(hex: hashFactorKey).toPublic().serialize(compressed: true)
-        try await self.deleteFactor(deleteFactorPub: hashFactorPub, deleteFactorKey: hashFactorKey)
+        try await deleteFactor(deleteFactorPub: hashFactorPub, deleteFactorKey: hashFactorKey)
     }
-    
-    public mutating func enableMFAWithRecoveryFactor ( enableMFA : enableMFARecoveryFactor = .init()) async throws -> String {
+
+    public func enableMFAWithRecoveryFactor(enableMFA: MFARecoveryFactor = MFARecoveryFactor()) async throws -> String {
         try await self.enableMFA()
-        let recovery = try await self.createFactor(tssShareIndex: .RECOVERY, factorKey: enableMFA.factorKey, factorDescription: enableMFA.factorTypeDescription, additionalMetadata: enableMFA.additionalMetadata)
+        let recovery = try await createFactor(tssShareIndex: .recovery, factorKey: enableMFA.factorKey, factorDescription: enableMFA.factorTypeDescription, additionalMetadata: enableMFA.additionalMetadata)
         return recovery
     }
-    
-    private func bootstrapTssClient (selected_tag: String ) async throws -> (TSSClient, [String: String]) {
-        
-        guard let tkey = self.tkey else {
-            throw TSSClientError("invalid tkey")
+
+    private func bootstrapTssClient(selected_tag: String) async throws -> (TSSClient, [String: String]) {
+        guard let tkey = tkey else {
+            throw CoreKitError.invalidTKey
         }
-        
-        guard let verifier = self.verifier, let verifierId = self.verifierId , let tssEndpoints = self.tssEndpoints, let factorKey = self.factorKey, let nodeIndexes = self.nodeIndexes else {
-            throw TSSClientError("Invalid parameter for tss client")
+
+        guard let verifier = verifier, let verifierId = verifierId, let tssEndpoints = tssEndpoints, let factorKey = factorKey, let nodeIndexes = nodeIndexes else {
+            throw CoreKitError.invalidInput
         }
-        
+
         let tssNonce = try TssModule.get_tss_nonce(threshold_key: tkey, tss_tag: selected_tag)
-        
+
         let compressed = try await TssModule.get_tss_pub_key(threshold_key: tkey, tss_tag: selected_tag)
-        
+
         let publicKey = try curveSecp256k1.PublicKey(hex: compressed).serialize(compressed: false)
-        
+
         let (tssIndex, tssShare) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selected_tag, factorKey: factorKey)
-        
-        if ( publicKey.count < 128 || publicKey.count > 130 ) {
-            throw TSSClientError("Public Key should be in uncompressed format")
+
+        if publicKey.count < 128 || publicKey.count > 130 {
+            throw CoreKitError.requireUncompressedPublicKey
         }
-        
+
         // generate a random nonce for sessionID
-        let randomKey = try BigUInt(  Data(hexString:  curveSecp256k1.SecretKey().serialize() )! )
+        let randomKey = try BigUInt(Data(hexString: curveSecp256k1.SecretKey().serialize())!)
         let random = BigInt(sign: .plus, magnitude: randomKey) + BigInt(Date().timeIntervalSince1970)
-        let sessionNonce = TSSHelpers.base64ToBase64url( base64: try TSSHelpers.hashMessage(message: random.magnitude.serialize().addLeading0sForLength64().toHexString()))
-        
+        let sessionNonce = TSSHelpers.base64ToBase64url(base64: try TSSHelpers.hashMessage(message: random.magnitude.serialize().addLeading0sForLength64().toHexString()))
+
         // create the full session string
         let session = TSSHelpers.assembleFullSession(verifier: verifier, verifierId: verifierId, tssTag: selected_tag, tssNonce: String(tssNonce), sessionNonce: sessionNonce)
 
@@ -299,12 +266,10 @@ extension MpcCoreKit {
         let coeffs = try TSSHelpers.getServerCoefficients(participatingServerDKGIndexes: nodeInd.map({ BigInt($0) }), userTssIndex: userTssIndex)
 
         let shareUnsigned = BigUInt(tssShare, radix: 16)!
-        let share = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: nodeInd.map({ BigInt($0) }), userTssIndex: userTssIndex, userTssShare:  BigInt(sign: .plus, magnitude: shareUnsigned))
-        
-        
+        let share = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: nodeInd.map({ BigInt($0) }), userTssIndex: userTssIndex, userTssShare: BigInt(sign: .plus, magnitude: shareUnsigned))
 
-        let client = try TSSClient(session: session, index: Int32(clientIndex), parties: partyIndexes.map({Int32($0)}), endpoints: urls.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketUrls.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: Data(hex: publicKey)))
+        let client = try TSSClient(session: session, index: Int32(clientIndex), parties: partyIndexes.map({ Int32($0) }), endpoints: urls.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketUrls.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: Data(hex: publicKey)))
 
         return (client, coeffs)
-     }
+    }
 }

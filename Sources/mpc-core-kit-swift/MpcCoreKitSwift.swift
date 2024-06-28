@@ -1,156 +1,161 @@
-//
-//  File.swift
-//
-//
-//  Created by CW Lee on 10/01/2024.
-//
-
 import Foundation
-import tkey
-
 import CustomAuth
-import TorusUtils
 import FetchNodeDetails
 import SingleFactorAuth
+import TorusUtils
 
-#if canImport(curveSecp256k1)
-import curveSecp256k1
+#if canImport(tkey)
+    import tkey
 #endif
 
-public struct MpcCoreKit  {
-    
-    internal var selectedTag: String?;
-    internal var factorKey: String?;
-    
-    internal var userInfo: [String: Any]?;
-    
-    internal var oauthKey: String?;
-    internal var network: Web3AuthNetwork;
-    internal var option: CoreKitOptions;
-    
-    internal var appState : CoreKitAppState;
-    
-    public var metadataHostUrl : String?;
-    
-    public var tkey : ThresholdKey?;
-    
-    public var tssEndpoints: [String]?;
-    public var authSigs: [String]?;
-    public var verifier: String?;
-    public var verifierId: String?;
-    
-    public var torusUtils: TorusUtils;
-    public var nodeIndexes: [Int]?;
-    public var nodeDetails : AllNodeDetailsModel? ;
-    
-    public var nodeDetailsManager : NodeDetailManager;
-    
-    public var sigs: [String]?;
-    
-    public var coreKitStorage : CoreKitStorage
-    
-    private let storeKey = "corekitStore"
-    
-    private let localAppStateKey = "localAppState"
-    
-    
-    // init
-    public init( web3AuthClientId : String , web3AuthNetwork: Web3AuthNetwork, disableHashFactor : Bool = false, localStorage: ILocalStorage, manualSync: Bool = false ) {
-        self.option = .init(disableHashFactor: disableHashFactor , Web3AuthClientId: web3AuthClientId, network: web3AuthNetwork, manualSync: manualSync)
-        self.appState = CoreKitAppState.init()
-        
-        self.network = web3AuthNetwork
-        
-        self.torusUtils = TorusUtils( enableOneKey: true,
-                                      network: self.network.toTorusNetwork(), clientId: web3AuthClientId )
-        
-        self.nodeDetailsManager = NodeDetailManager(network: self.network.toTorusNetwork())
-        
-        self.coreKitStorage = .init(storeKey: self.storeKey, storage: localStorage)
+#if canImport(curveSecp256k1)
+    import curveSecp256k1
+#endif
 
-    }
-    
-    public mutating func updateAppState( state: CoreKitAppState) async throws {
-        // mutating self
-        self.appState.merge(with: state)
+public class MpcCoreKit {
+    internal var selectedTag: String?
+    internal var factorKey: String?
+
+    // TODO: Replace [String: Any] with [String: Codable], throughout
+    internal var userInfo: [String: Any]?
+
+    internal var oauthKey: String?
+    internal var network: Web3AuthNetwork
+    internal var option: CoreKitOptions
+
+    internal var appState: CoreKitAppState
+
+    public var metadataHostUrl: String?
+
+    public var tkey: ThresholdKey?
+
+    public var tssEndpoints: [String]?
+    public var authSigs: [String]?
+    public var verifier: String?
+    public var verifierId: String?
+
+    public var torusUtils: TorusUtils
+    public var nodeIndexes: [Int]?
+    public var nodeDetails: AllNodeDetailsModel?
+
+    public var nodeDetailsManager: NodeDetailManager
+
+    public var sigs: [String]?
+
+    public var coreKitStorage: CoreKitStorage
+
+    private let storeKey = "corekitStore"
+
+    private let localAppStateKey = "localAppState"
+
+    // init
+    // TODO: This should accept a param class instead
+    public init(web3AuthClientId: String, web3AuthNetwork: Web3AuthNetwork, disableHashFactor: Bool = false, localStorage: ILocalStorage, manualSync: Bool = false) throws {
+        if web3AuthClientId.isEmpty {
+            throw CoreKitError.invalidInput
+        }
         
-        let jsonState = try JSONEncoder().encode(self.appState).bytes
-        try await self.coreKitStorage.set(key: self.localAppStateKey, payload: jsonState )
+        option = CoreKitOptions(disableHashFactor: disableHashFactor, Web3AuthClientId: web3AuthClientId, network: web3AuthNetwork, manualSync: manualSync) // TODO: This could be passed in instead
+        
+        appState = CoreKitAppState()
+
+        network = web3AuthNetwork
+
+        torusUtils = TorusUtils(enableOneKey: true, network: network.toTorusNetwork(), clientId: web3AuthClientId)
+
+        nodeDetailsManager = NodeDetailManager(network: network.toTorusNetwork())
+
+        coreKitStorage = CoreKitStorage(storeKey: storeKey, storage: localStorage)
     }
-    
+
+    public func updateAppState(state: CoreKitAppState) async throws {
+        appState.merge(with: state)
+
+        let jsonState = try JSONEncoder().encode(appState).bytes
+        try await coreKitStorage.set(key: localAppStateKey, payload: jsonState)
+    }
+
     public func getCurrentFactorKey() throws -> String {
-        guard let factor = self.appState.factorKey else {
-            throw "factor key absent"
+        guard let factor = appState.factorKey else {
+            throw CoreKitError.factorKeyUnavailable
         }
         return factor
     }
-    
+
     public func getDeviceMetadataShareIndex() throws -> String {
-        guard let shareIndex = self.appState.deviceMetadataShareIndex else {
-            throw "share index not found"
+        guard let shareIndex = appState.deviceMetadataShareIndex else {
+            throw CoreKitError.notFound(msg: "share index not found")
         }
         return shareIndex
     }
-    
-    public mutating func loginWithOAuth(loginProvider: LoginProviders, clientId: String, verifier: String , jwtParams: [String: String] = [:], redirectURL: String = "tdsdk://tdsdk/oauthCallback", browserRedirectURL: String = "https://scripts.toruswallet.io/redirect.html" ) async throws -> MpcKeyDetails {
+
+    // TODO: This should accept a param class instead
+    public func loginWithOAuth(loginProvider: LoginProviders, clientId: String, verifier: String, jwtParams: [String: String] = [:], redirectURL: String = "tdsdk://tdsdk/oauthCallback", browserRedirectURL: String = "https://scripts.toruswallet.io/redirect.html") async throws -> MpcKeyDetails {
         if loginProvider == .jwt && jwtParams.isEmpty {
-            throw "jwt login should provide jwtParams"
+            throw CoreKitError.notFound(msg: "jwt login should provide jwtParams")
         }
+
+        let sub = SubVerifierDetails(loginType: .web,
+                                     loginProvider: loginProvider,
+                                     clientId: clientId,
+                                     verifier: verifier,
+                                     redirectURL: redirectURL,
+                                     browserRedirectURL: browserRedirectURL,
+                                     jwtParams: jwtParams
+        )
         
-        let sub = SubVerifierDetails( loginType: .web,
-                                      loginProvider: loginProvider,
-                                      clientId: clientId,
-                                      verifier: verifier,
-                                      redirectURL: redirectURL,
-                                      browserRedirectURL: browserRedirectURL,
-                                      jwtParams: jwtParams
-                                     )
-        let customAuth = CustomAuth(web3AuthClientId: option.Web3AuthClientId, aggregateVerifierType: .singleLogin, aggregateVerifier: verifier, subVerifierDetails: [sub], network: self.network.toTorusNetwork(), enableOneKey: true)
-        
+        let customAuth = CustomAuth(web3AuthClientId: option.Web3AuthClientId, aggregateVerifierType: .singleLogin, aggregateVerifier: verifier, subVerifierDetails: [sub], network: network.toTorusNetwork(), enableOneKey: true)
+
         let userData = try await customAuth.triggerLogin()
-        return try await self.login(userData: userData)
+        return try await login(userData: userData)
     }
-    
-    
+
     // mneomonic to share
-    public func mnemonicToKey(shareMnemonic: String, format: String) -> String? {
+    public func mnemonicToKey(shareMnemonic: String, format: String) throws -> String {
         // Assuming ShareSerializationModule.deserializeMnemonic returns Data
-        let factorKey = try? ShareSerializationModule.deserialize_share(threshold_key: tkey!, share: shareMnemonic, format: format);
-        return factorKey;
+        let factorKey = try ShareSerializationModule.deserialize_share(threshold_key: tkey!, share: shareMnemonic, format: format)
+        return factorKey
     }
 
     // share to mneomonic
-    public func keyToMnemonic(factorKey: String, format: String) -> String? {
+    public func keyToMnemonic(factorKey: String, format: String) throws -> String {
         // Assuming ShareSerializationModule.deserializeMnemonic returns Data
-        let mnemonic = try? ShareSerializationModule.serialize_share(threshold_key: tkey!, share: factorKey, format: format)
+        let mnemonic = try ShareSerializationModule.serialize_share(threshold_key: tkey!, share: factorKey, format: format)
         return mnemonic
     }
-    public mutating func loginWithJwt(verifier: String, verifierId: String, idToken: String , userInfo : [String:Any] = [:] ) async throws -> MpcKeyDetails {
-        let singleFactor = SingleFactorAuth(singleFactorAuthArgs: .init( web3AuthClientId: self.option.Web3AuthClientId ,network: self.network))
-        
-        let torusKey = try await singleFactor.getTorusKey(loginParams: .init(verifier: verifier, verifierId: verifierId, idToken: idToken))
+
+    public func loginWithJwt(verifier: String, verifierId: String, idToken: String, userInfo: [String: Any] = [:]) async throws -> MpcKeyDetails {
+        let singleFactor = SingleFactorAuth(singleFactorAuthArgs: SingleFactorAuthArgs(web3AuthClientId: option.Web3AuthClientId, network: network))
+
+        let torusKey = try await singleFactor.getTorusKey(loginParams: LoginParams(verifier: verifier, verifierId: verifierId, idToken: idToken))
         var modUserInfo = userInfo
         modUserInfo.updateValue(verifier, forKey: "verifier")
         modUserInfo.updateValue(verifierId, forKey: "verifierId")
-        return try await self.login(userData: TorusKeyData(torusKey: torusKey, userInfo: modUserInfo))
+        return try await login(userData: TorusKeyData(torusKey: torusKey, userInfo: modUserInfo))
     }
-    
+
     public func getUserInfo() throws -> [String: Any] {
-        guard let userInfo = self.userInfo else {
-            throw ("user is not logged in.")
+        guard let userInfo = userInfo else {
+            throw CoreKitError.notLoggedIn
         }
         return userInfo
     }
-    
+
     public func getKeyDetails() async throws -> MpcKeyDetails {
-        if((self.tkey == nil)) {
-            throw ("Tkey is not initialized!")
+        if tkey == nil {
+            throw CoreKitError.notInitialized
         }
-        guard let finalKeyDetails = try self.tkey?.get_key_details() else {
-            throw ("Key Details Not Found!")
+
+        guard let finalKeyDetails = try tkey?.get_key_details() else {
+            throw CoreKitError.keyDetailsNotFound
         }
-        let tssTag = try TssModule.get_tss_tag(threshold_key: self.tkey!)
-        let tssPubKey = try await TssModule.get_tss_pub_key(threshold_key: self.tkey!, tss_tag: tssTag)
+
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
+        }
+        let tssTag = try TssModule.get_tss_tag(threshold_key: tkey!)
+        let tssPubKey = try await TssModule.get_tss_pub_key(threshold_key: tkey!, tss_tag: tssTag)
 
         let factorsCount = try await getAllFactorPubs().count
         let keyDetails = MpcKeyDetails(
@@ -164,264 +169,274 @@ public struct MpcCoreKit  {
         )
         return keyDetails
     }
-    
+
     // login should return key_details
     // with factor key if new user
     // with required factor > 0 if existing user
-    private mutating func login (userData: TorusKeyData) async throws -> MpcKeyDetails {
-        
-        self.oauthKey = userData.torusKey.oAuthKeyData?.privKey
-        self.userInfo = userData.userInfo;
+    private func login(userData: TorusKeyData) async throws -> MpcKeyDetails {
+        oauthKey = userData.torusKey.oAuthKeyData?.privKey
+        userInfo = userData.userInfo
 
         guard let verifierLocal = userData.userInfo["verifier"] as? String, let verifierIdLocal = userData.userInfo["verifierId"] as? String else {
-            throw ("Error: invalid verifer, verifierId")
+            throw CoreKitError.invalidVerifierOrVerifierID
         }
-        
-        self.verifier = verifierLocal;
-        self.verifierId = verifierIdLocal;
-        
+
+        verifier = verifierLocal
+        verifierId = verifierIdLocal
+
         // get from service provider/ torusUtils
-        self.nodeIndexes = []
-        
-        let fnd = self.nodeDetailsManager
+        nodeIndexes = []
+
+        let fnd = nodeDetailsManager
         let nodeDetails = try await fnd.getNodeDetails(verifier: verifierLocal, verifierID: verifierIdLocal)
-        
+
         guard let host = nodeDetails.getTorusNodeEndpoints().first else {
-            throw "Invalid node"
+            throw CoreKitError.invalidNode
         }
-        guard let metadatahost = URL( string: host)?.host else {
-            throw "invalid metadata endpoint"
+        guard let metadatahost = URL(string: host)?.host else {
+            throw CoreKitError.invalidMetadataEndpoint
         }
-        
-        
+
         let metadataEndpoint = "https://" + metadatahost + "/metadata"
 
-        
-        self.metadataHostUrl = metadataEndpoint
-        
+        metadataHostUrl = metadataEndpoint
+
         self.nodeDetails = nodeDetails
-        
-        self.tssEndpoints = nodeDetails.torusNodeTSSEndpoints
-        
-        guard let postboxkey = self.oauthKey else {
-            throw RuntimeError("error, invalid postboxkey")
+
+        tssEndpoints = nodeDetails.torusNodeTSSEndpoints
+
+        guard let postboxkey = oauthKey else {
+            throw CoreKitError.invalidPostboxKey
         }
-        
+
         guard let sessionData = userData.torusKey.sessionData else {
-            throw RuntimeError("error, invalid session data")
+            throw CoreKitError.invalidSessionData
         }
-        
+
         let sessionTokenData = sessionData.sessionTokenData
 
         let signatures = sessionTokenData.map { token in
-            return [  "data": Data(hex: token!.token).base64EncodedString(),
-                      "sig": token!.signature ]
+            ["data": Data(hex: token!.token).base64EncodedString(),
+             "sig": token!.signature]
         }
-        
+
         let sigs: [String] = try signatures.map { String(decoding: try JSONSerialization.data(withJSONObject: $0), as: UTF8.self) }
-        
-        self.authSigs = sigs
-        
+
+        authSigs = sigs
+
         // initialize tkey
         let storage_layer = try StorageLayer(enable_logging: true, host_url: metadataEndpoint, server_time_offset: 2)
-        
+
         let service_provider = try ServiceProvider(enable_logging: true, postbox_key: postboxkey, useTss: true, verifier: verifier, verifierId: verifierId, nodeDetails: nodeDetails)
-        
+
         let rss_comm = try RssComm()
-        let thresholdKey = try ThresholdKey(
+        
+        tkey = try ThresholdKey(
             storage_layer: storage_layer,
             service_provider: service_provider,
             enable_logging: true,
-            manual_sync: self.option.manualSync,
+            manual_sync: option.manualSync,
             rss_comm: rss_comm)
 
-        let key_details = try await thresholdKey.initialize(never_initialize_new_key: false, include_local_metadata_transitions: false)
-        self.appState.metadataPubKey = try key_details.pub_key.getPublicKey(format: .EllipticCompress)
-        
-        self.tkey = thresholdKey
+        let key_details = try await tkey!.initialize(never_initialize_new_key: false, include_local_metadata_transitions: false)
+        appState.metadataPubKey = try key_details.pub_key.getPublicKey(format: .EllipticCompress)
         
         if key_details.required_shares > 0 {
-            try await self.existingUser()
+            try await existingUser()
         } else {
-            try await self.newUser()
+            try await newUser()
         }
-        
+
         // to add tss pub details to corekit details
-        let finalKeyDetails = try thresholdKey.get_key_details()
-        let tssTag = try TssModule.get_tss_tag(threshold_key: thresholdKey)
-        
-        let tssPubKey = try await TssModule.get_tss_pub_key(threshold_key: thresholdKey, tss_tag: tssTag) 
-        
-        return .init(tssPubKey: tssPubKey, metadataPubKey: try finalKeyDetails.pub_key.getPublicKey(format: .EllipticCompress), requiredFactors: finalKeyDetails.required_shares, threshold: finalKeyDetails.threshold, shareDescriptions: finalKeyDetails.share_descriptions, totalShares: finalKeyDetails.total_shares, totalFactors: 0)
-    }
-    
-    private mutating func existingUser() async throws {
-        guard self.tkey != nil else {
-            throw "Invalid tkey"
+        let finalKeyDetails = try tkey!.get_key_details()
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
         }
-        
-        var factor: String?
+        let tssTag = try TssModule.get_tss_tag(threshold_key: tkey!)
+
+        let tssPubKey = try await TssModule.get_tss_pub_key(threshold_key: tkey!, tss_tag: tssTag)
+
+        return MpcKeyDetails(tssPubKey: tssPubKey, metadataPubKey: try finalKeyDetails.pub_key.getPublicKey(format: .EllipticCompress), requiredFactors: finalKeyDetails.required_shares, threshold: finalKeyDetails.threshold, shareDescriptions: finalKeyDetails.share_descriptions, totalShares: finalKeyDetails.total_shares, totalFactors: 0)
+    }
+
+    private func existingUser() async throws {
+        guard tkey != nil else {
+            throw CoreKitError.invalidTKey
+        }
+
         // try check for hash factor
-        if ( self.option.disableHashFactor == false) {
-            factor = try? self.getHashKey()
-            // if factor not found, continue forward and try to retrive device factor
-            if factor != nil {
-                do {
-                    try await self.inputFactor(factorKey: factor!)
-                    self.factorKey = factor
-                    return
-                } catch {
-                    // swallow on invalid hashFactor
-                }
-            }
-        }
-        
-        // try check device Storage
-        do {
-            factor = try? await self.getDeviceFactor()
-            // factor not found, return and request factor from inputFactor function
-            guard let factor = factor else {
-                print("device Factor not found")
-                return
-            }
-            
-            try await self.inputFactor(factorKey: factor)
-            self.factorKey = factor
-        } catch {
-            // swallow on invalid device factor
-            // do not throw to allow input factor
+        if option.disableHashFactor == false {
+            let factor = try Utilities.getHashedPrivateKey(postboxKey: oauthKey!, clientID: option.Web3AuthClientId)
+            // TODO: factors need to be verified before insertion
+            try await inputFactor(factorKey: factor)
+            factorKey = factor
+        } else {
+            let factor = try await getDeviceFactor()
+            // TODO: factors need to be verified before insertion
+            try await inputFactor(factorKey: factor)
+            factorKey = factor
         }
     }
-    
-    private mutating func newUser () async throws {
-        guard let tkey = self.tkey else {
-            throw "Invalid tkey"
+
+    private func newUser() async throws {
+        guard let tkey = tkey else {
+            throw CoreKitError.invalidTKey
         }
-        guard let nodeDetails = self.nodeDetails else {
-            throw "absent nodeDetails"
+        guard let nodeDetails = nodeDetails else {
+            throw CoreKitError.nodeDetailsMissing
         }
-        
+
         let _ = try await tkey.reconstruct()
 
         // TSS Module Initialize - create default tag
         // generate factor key or use oauthkey hash as factor
-        let factorKey :  String
-        let descriptionTypeModule : FactorDescriptionTypeModule
-        if ( self.option.disableHashFactor == false ) {
-            factorKey = try self.getHashKey()
-            descriptionTypeModule = FactorDescriptionTypeModule.HashedShare
-            
-        } else  {
-            // random generate
-            factorKey  = try curveSecp256k1.SecretKey().serialize()
-            descriptionTypeModule = FactorDescriptionTypeModule.DeviceShare
-        }
+        let factorKey: String
+        let descriptionTypeModule: FactorType
         
+        if option.disableHashFactor == false {
+            factorKey = try Utilities.getHashedPrivateKey(postboxKey: oauthKey!, clientID: option.Web3AuthClientId)
+            descriptionTypeModule = FactorType.HashedShare
+
+        } else {
+            // random generate
+            factorKey = try curveSecp256k1.SecretKey().serialize()
+            descriptionTypeModule = FactorType.DeviceShare
+        }
+
         // derive factor pub
         let factorPub = try curveSecp256k1.SecretKey(hex: factorKey).toPublic().serialize(compressed: false)
 
         // use input to create tag tss share
-        let tssIndex = TssShareType.DEVICE
-        
+        let tssIndex = TssShareType.device
+
         let defaultTag = "default"
-        try await TssModule.create_tagged_tss_share(threshold_key: tkey, tss_tag: defaultTag, deviceTssShare: nil, factorPub: factorPub, deviceTssIndex: tssIndex.toInt32(), nodeDetails: nodeDetails, torusUtils: self.torusUtils)
+        try await TssModule.create_tagged_tss_share(threshold_key: tkey, tss_tag: defaultTag, deviceTssShare: nil, factorPub: factorPub, deviceTssIndex: tssIndex.rawValue, nodeDetails: nodeDetails, torusUtils: torusUtils)
 
         // backup metadata share using factorKey
         // finding device share index
         var shareIndexes = try tkey.get_shares_indexes()
-        shareIndexes.removeAll(where: {$0 == "1"})
+        shareIndexes.removeAll(where: { $0 == "1" })
 
         try TssModule.backup_share_with_factor_key(threshold_key: tkey, shareIndex: shareIndexes[0], factorKey: factorKey)
-        
+
         // record share description
         let description = createCoreKitFactorDescription(module: descriptionTypeModule, tssIndex: tssIndex)
         let jsonStr = try factorDescriptionToJsonStr(dataObj: description)
-        try await tkey.add_share_description(key: factorPub, description: jsonStr )
+        try await tkey.add_share_description(key: factorPub, description: jsonStr)
 
-        self.factorKey = factorKey;
-        let deviceMetadataShareIndex = try await  TssModule.find_device_share_index(threshold_key: tkey, factor_key: factorKey)
-        
+        self.factorKey = factorKey
+        let deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: tkey, factor_key: factorKey)
+
         let metadataPubKey = try tkey.get_key_details().pub_key.getPublicKey(format: .EllipticCompress)
-        try await self.updateAppState(state: .init(factorKey: factorKey, metadataPubKey: metadataPubKey, deviceMetadataShareIndex: deviceMetadataShareIndex))
-        
+        try await updateAppState(state: CoreKitAppState(factorKey: factorKey, metadataPubKey: metadataPubKey, deviceMetadataShareIndex: deviceMetadataShareIndex))
+
         // save as device factor if hashfactor is disable
-        if ( self.option.disableHashFactor == true ) {
-            try await self.setDeviceFactor(factorKey: factorKey)
+        if option.disableHashFactor == true {
+            try await setDeviceFactor(factorKey: factorKey)
         }
     }
-    
-    public mutating func logout () async throws {
-        self.appState = .init()
-        let jsonState = try JSONEncoder().encode(self.appState).bytes
-        try await self.coreKitStorage.set(key: self.localAppStateKey, payload: jsonState)
+
+    public func logout() async throws {
+        appState = CoreKitAppState()
+        let jsonState = try JSONEncoder().encode(appState).bytes
+        try await coreKitStorage.set(key: localAppStateKey, payload: jsonState)
     }
 
-    public mutating func inputFactor (factorKey: String) async throws {
-        guard let threshold_key = self.tkey else {
-            throw "Invalid tkey"
+    public func inputFactor(factorKey: String) async throws {
+        guard let threshold_key = tkey else {
+            throw CoreKitError.invalidTKey
         }
         // input factor
+        // TODO: factors need to be verified before insertion
         try await threshold_key.input_factor_key(factorKey: factorKey)
-        
+
         // try using better methods ?
-        let deviceMetadataShareIndex = try await  TssModule.find_device_share_index(threshold_key: threshold_key, factor_key: factorKey)
-        try await self.updateAppState(state: .init(deviceMetadataShareIndex: deviceMetadataShareIndex))
-        
+        let deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: threshold_key, factor_key: factorKey)
+        try await updateAppState(state: CoreKitAppState(deviceMetadataShareIndex: deviceMetadataShareIndex))
+
         // setup tkey ( assuming only 2 factor is required)
         let _ = try await threshold_key.reconstruct()
-        
+
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
+        }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
         let _ = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey)
         self.factorKey = factorKey
     }
-    
+
     public func publicKey() async throws -> String {
-        guard let threshold_key = self.tkey else {
-            throw "Invalid tkey"
+        guard let threshold_key = tkey else {
+            throw CoreKitError.invalidTKey
+        }
+        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
+        if tssTags.isEmpty {
+            throw CoreKitError.noTssTags
         }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-       
+
         return try await TssModule.get_tss_pub_key(threshold_key: threshold_key, tss_tag: selectedTag)
     }
-    
+
     public func commitChanges() async throws {
         // create a copy syncMetadata
-        guard let tkey = self.tkey else {
-            throw RuntimeError("Not yet initalize")
+        guard let tkey = tkey else {
+            throw CoreKitError.notInitialized
         }
         try await tkey.sync_local_metadata_transistions()
     }
-    
+
     // To remove reset account function
-    public func resetAccount () async throws {
-        guard let postboxkey = self.oauthKey else {
-            throw "Not yet login via oauth"
+    public func resetAccount() async throws {
+        guard let postboxkey = oauthKey else {
+            throw CoreKitError.notLoggedIn
         }
-        
-        guard let threshold_key = self.tkey else {
-            throw "invalid Tkey"
+
+        guard let threshold_key = tkey else {
+            throw CoreKitError.invalidTKey
         }
-        
-        guard let _ = self.metadataHostUrl else {
-            throw "invalid metadata url"
+
+        guard let _ = metadataHostUrl else {
+            throw CoreKitError.invalidMetadataUrl
         }
-        
+
         try await threshold_key.storage_layer_set_metadata(private_key: postboxkey, json: "{ \"message\": \"KEY_NOT_FOUND\" }")
 
         // reset appState
-        try await self.resetDeviceFactorStore()
-        try await self.coreKitStorage.set(key: self.localAppStateKey, payload: [:])
+        try await resetDeviceFactorStore()
+        try await coreKitStorage.set(key: localAppStateKey, payload: [:])
+
 //        try await self.coreKitStorage.set(key: self.localAppStateKey, payload: [:])
     }
+}
 
-    internal func getHashKey () throws -> String {
-        guard let oauthKey = self.oauthKey else {
-            throw "invalid oauth key"
+
+extension MpcCoreKit {
+    public func getDeviceFactor() async throws -> String {
+        // getMetadataPublicKey compressed
+        guard let metadataPubKey = appState.metadataPubKey else {
+            throw CoreKitError.metadataPubKeyUnavailable
         }
-        guard let uid = try "\(oauthKey)_\(self.option.Web3AuthClientId)".data(using: .utf8)?.sha3(varient: Variants.KECCAK256 ).toHexString() else {
-            throw "invalid string in getHashKey"
+
+        let deviceFactorStorage = DeviceFactorStorage(storage: coreKitStorage)
+        return try await deviceFactorStorage.getFactor(metadataPubKey: metadataPubKey)
+    }
+
+    public func setDeviceFactor(factorKey: String) async throws {
+        guard let metadataPubKey = appState.metadataPubKey else {
+            throw CoreKitError.metadataPubKeyUnavailable
         }
-        let key = try curveSecp256k1.SecretKey(hex: uid).serialize()
-        return key
+        let deviceFactorStorage = DeviceFactorStorage(storage: coreKitStorage)
+        try await deviceFactorStorage.setFactor(metadataPubKey: metadataPubKey, factorKey: factorKey)
+    }
+
+    internal func resetDeviceFactorStore() async throws {
+        guard let metadataPubKey = appState.metadataPubKey else {
+            throw CoreKitError.metadataPubKeyUnavailable
+        }
+        try await coreKitStorage.set(key: metadataPubKey, payload: [:])
     }
 }
+
