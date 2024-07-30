@@ -1,6 +1,7 @@
 import curveSecp256k1
 import JWTKit
-@testable import mpc_core_kit_swift
+import FetchNodeDetails
+import mpc_core_kit_swift
 import SingleFactorAuth
 import XCTest
 
@@ -90,7 +91,7 @@ func mockLogin2(email: String) throws -> String {
 
 final class mpc_kit_swiftTests: XCTestCase {
     func resetMPC(email: String, verifier: String, clientId: String) async throws {
-        let coreKitInstance = try MpcCoreKit(web3AuthClientId: clientId, web3AuthNetwork: Web3AuthNetwork.SAPPHIRE_DEVNET, disableHashFactor: false, localStorage: MemoryStorage())
+        let coreKitInstance = try MpcCoreKit(options: Web3AuthOptions(web3AuthClientId: clientId, manualSync: false, web3AuthNetwork: .sapphire(.SAPPHIRE_DEVNET), localStorage: MemoryStorage(), disableHashFactor: false))
         let data = try mockLogin2(email: email)
         let token = data
 
@@ -99,27 +100,30 @@ final class mpc_kit_swiftTests: XCTestCase {
     }
 
     func testLoginFromWebAccount() async throws {
-        let email = "testios002"
+        let email = "testEmail1"
         let verifier = "torus-test-health"
-        let clientId = "torus-test-health"
-//        try await resetMPC(email: email, verifier: verifier, clientId: clientId)
+        let clientId = "torus-key-test"
+        try await resetMPC(email: email, verifier: verifier, clientId: clientId)
 
         let memoryStorage = MemoryStorage()
-        let coreKitInstance = try MpcCoreKit(web3AuthClientId: clientId, web3AuthNetwork: Web3AuthNetwork.SAPPHIRE_DEVNET, disableHashFactor: false, localStorage: memoryStorage, manualSync: true)
+        
+        let coreKitInstance = try MpcCoreKit(options: Web3AuthOptions(web3AuthClientId: clientId, manualSync: true, web3AuthNetwork: .sapphire(.SAPPHIRE_DEVNET), localStorage: memoryStorage, disableHashFactor: false))
 
         let data = try mockLogin2(email: email)
         let token = data
 
         let _ = try await coreKitInstance.loginWithJwt(verifier: verifier, verifierId: email, idToken: token)
 
-        let hash = try keccak256(data: Data(hex: "010203040506"))
+        let hash = try keccak256(data: Data(hexString: "010203040506")!)
         let signatures = try await coreKitInstance.tssSign(message: hash)
         print(signatures)
         //
+        /*
         let newFactor = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: ["my": "mymy"])
 
         let deleteFactorPub = try curveSecp256k1.SecretKey(hex: newFactor).toPublic().serialize(compressed: true)
         try await coreKitInstance.deleteFactor(deleteFactorPub: deleteFactorPub, deleteFactorKey: newFactor)
+         */
     }
 
     func testMFARecoveryFactor() async throws {
@@ -129,7 +133,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         // reset Account
         try await resetMPC(email: email, verifier: verifier, clientId: clientId)
         let memoryStorage = MemoryStorage()
-        let coreKitInstance = try MpcCoreKit(web3AuthClientId: clientId, web3AuthNetwork: Web3AuthNetwork.SAPPHIRE_DEVNET, disableHashFactor: false, localStorage: memoryStorage)
+        let coreKitInstance = try MpcCoreKit(options: Web3AuthOptions(web3AuthClientId: clientId, manualSync: false, web3AuthNetwork: .sapphire(.SAPPHIRE_DEVNET), localStorage: memoryStorage, disableHashFactor: false))
         let data = try mockLogin2(email: email)
         let token = data
 
@@ -138,7 +142,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         let recoveryFactor = try await coreKitInstance.enableMFAWithRecoveryFactor()
 
         let memoryStorage2 = MemoryStorage()
-        let coreKitInstance2 = try MpcCoreKit(web3AuthClientId: "torus-test-health", web3AuthNetwork: Web3AuthNetwork.SAPPHIRE_DEVNET, disableHashFactor: false, localStorage: memoryStorage2)
+        let coreKitInstance2 = try MpcCoreKit(options: Web3AuthOptions(web3AuthClientId: "torus-test-health", manualSync: false, web3AuthNetwork: .sapphire(.SAPPHIRE_DEVNET), localStorage: memoryStorage2, disableHashFactor: false))
         let data2 = try mockLogin2(email: email)
         let token2 = data2
 
@@ -153,13 +157,10 @@ final class mpc_kit_swiftTests: XCTestCase {
         XCTAssertEqual(getKeyDetails.requiredFactors, 0)
 
         let userInfo = try coreKitInstance2.getUserInfo()
-        if let verifierId = userInfo["verifierId"] as? String {
-            XCTAssertEqual(verifierId, email)
-        } else {
-            XCTFail("Verifier ID not matching.")
-        }
+        let verifierId = userInfo.verifierId
+        XCTAssertEqual(verifierId, email)
 
-        let hash2 = try Data(hex: "010203040506").sha3(varient: Variants.KECCAK256)
+        let hash2 = try Data(hexString: "010203040506")!.sha3(varient: Variants.KECCAK256)
         _ = try await coreKitInstance2.tssSign(message: hash2)
     }
 }

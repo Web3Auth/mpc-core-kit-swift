@@ -24,7 +24,7 @@ extension MpcCoreKit {
         }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
         let result = try await TssModule.get_tss_pub_key(threshold_key: threshold_key, tss_tag: selectedTag)
-        return Data(hex: result)
+        return Data(hexString: result)!
     }
 
     /// Signing Data without hashing
@@ -117,7 +117,7 @@ extension MpcCoreKit {
         try TssModule.backup_share_with_factor_key(threshold_key: threshold_key, shareIndex: shareIndex, factorKey: newFactor)
 
         // update description
-        let description = createCoreKitFactorDescription(module: FactorType.HashedShare, tssIndex: tssShareIndex)
+        let description = createCoreKitFactorDescription(module: FactorType.HashedShare, tssIndex: tssShareIndex, dateAdded: Int(Date().timeIntervalSince1970))
         let jsonStr = try factorDescriptionToJsonStr(dataObj: description)
         let factorPub = try curveSecp256k1.SecretKey(hex: newFactor).toPublic().serialize(compressed: true)
         try await threshold_key.add_share_description(key: factorPub, description: jsonStr)
@@ -193,11 +193,11 @@ extension MpcCoreKit {
     }
 
     public func enableMFA(enableMFA: MFARecoveryFactor = MFARecoveryFactor()) async throws {
-        if appState.metadataPubKey == nil {
+        if state.metadataPubKey == nil {
             throw CoreKitError.invalidMetadataPubKey
         }
 
-        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: oauthKey!, clientID: option.Web3AuthClientId)
+        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: state.oAuthKey!, clientID: option.web3AuthClientId)
         let currentFactor = try getCurrentFactorKey()
 
         if currentFactor != hashFactorKey {
@@ -249,7 +249,7 @@ extension MpcCoreKit {
         // generate a random nonce for sessionID
         let randomKey = try BigUInt(Data(hexString: curveSecp256k1.SecretKey().serialize())!)
         let random = BigInt(sign: .plus, magnitude: randomKey) + BigInt(Date().timeIntervalSince1970)
-        let sessionNonce = TSSHelpers.base64ToBase64url(base64: try TSSHelpers.hashMessage(message: random.magnitude.serialize().addLeading0sForLength64().toHexString()))
+        let sessionNonce = TSSHelpers.base64ToBase64url(base64: try TSSHelpers.hashMessage(message: random.magnitude.serialize().addLeading0sForLength64().hexString))
 
         // create the full session string
         let session = TSSHelpers.assembleFullSession(verifier: verifier, verifierId: verifierId, tssTag: selected_tag, tssNonce: String(tssNonce), sessionNonce: sessionNonce)
@@ -268,7 +268,7 @@ extension MpcCoreKit {
         let shareUnsigned = BigUInt(tssShare, radix: 16)!
         let share = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: nodeInd.map({ BigInt($0) }), userTssIndex: userTssIndex, userTssShare: BigInt(sign: .plus, magnitude: shareUnsigned))
 
-        let client = try TSSClient(session: session, index: Int32(clientIndex), parties: partyIndexes.map({ Int32($0) }), endpoints: urls.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketUrls.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: Data(hex: publicKey)))
+        let client = try TSSClient(session: session, index: Int32(clientIndex), parties: partyIndexes.map({ Int32($0) }), endpoints: urls.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketUrls.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: Data(hexString: publicKey)!))
 
         return (client, coeffs)
     }

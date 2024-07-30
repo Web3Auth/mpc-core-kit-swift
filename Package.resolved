@@ -1,15 +1,6 @@
 {
   "pins" : [
     {
-      "identity" : "anycodable",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Flight-School/AnyCodable",
-      "state" : {
-        "revision" : "862808b2070cd908cb04f9aafe7de83d35f81b05",
-        "version" : "0.6.7"
-      }
-    },
-    {
       "identity" : "bigint",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/attaswift/BigInt.git",
@@ -32,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/torusresearch/customauth-swift-sdk",
       "state" : {
-        "revision" : "60b48acb161fb4341c353c27bc6dd96af76887ff",
-        "version" : "10.0.1"
+        "branch" : "features_update",
+        "revision" : "72a83f30942b1f87cbed7eac5b1c5a164e91d1d4"
       }
     },
     {
@@ -41,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/torusresearch/fetch-node-details-swift.git",
       "state" : {
-        "revision" : "22bfadf7491d77a0bc1953af002cadbd61383e7d",
-        "version" : "6.0.2"
+        "revision" : "4bd96c33ba8d02d9e27190c5c7cedf09cfdfd656",
+        "version" : "6.0.3"
       }
     },
     {
@@ -86,8 +77,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Web3Auth/single-factor-auth-swift",
       "state" : {
-        "revision" : "73c5066d369c7d2aa1057c56a89b7f1dcdda3270",
-        "version" : "5.0.0"
+        "branch" : "features_update",
+        "revision" : "e9ae8bef0d49ae5d72dc344520c86acf4ae993be"
       }
     },
     {
@@ -122,8 +113,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tkey/tkey-mpc-swift",
       "state" : {
-        "revision" : "2df2d0a6c51afc76909028eb8542fe78e565d106",
-        "version" : "3.0.1"
+        "branch" : "update_features",
+        "revision" : "cc7b062745e82d114dd4fdec1c9641665727e539"
       }
     },
     {
@@ -131,8 +122,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/torusresearch/torus-utils-swift.git",
       "state" : {
-        "revision" : "608c28404c506983bfec7bbd957632fc0544db8c",
-        "version" : "8.1.2"
+        "revision" : "303dc2cf41db7c10f769855edad0e717ced2d554",
+        "version" : "9.0.0"
       }
     },
     {

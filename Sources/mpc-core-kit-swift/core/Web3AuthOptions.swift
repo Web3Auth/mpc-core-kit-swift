@@ -1,0 +1,22 @@
+import Foundation
+import FetchNodeDetails
+
+public class Web3AuthOptions {
+    public let web3AuthClientId: String
+    public let manualSync: Bool
+    public let web3AuthNetwork: TorusNetwork
+    public let storageKey: String?
+    public let sessionTime: Int?
+    public let disableHashFactor: Bool
+    public let localStorage: ILocalStorage
+    
+    public init(web3AuthClientId: String, manualSync: Bool, web3AuthNetwork: TorusNetwork, localStorage: ILocalStorage, storageKey: String? = "local", sessionTime: Int? = 86000, disableHashFactor: Bool = false) {
+        self.web3AuthClientId = web3AuthClientId
+        self.manualSync = manualSync
+        self.web3AuthNetwork = web3AuthNetwork
+        self.storageKey = storageKey
+        self.sessionTime = sessionTime
+        self.localStorage = localStorage
+        self.disableHashFactor = disableHashFactor
+    }
+}

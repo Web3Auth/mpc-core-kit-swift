@@ -5,28 +5,30 @@ import SingleFactorAuth
     import tkey
 #endif
 
-public class CoreKitAppState: Codable, Equatable {
-    public static func == (lhs: CoreKitAppState, rhs: CoreKitAppState) -> Bool {
-        return lhs.factorKey == rhs.factorKey && lhs.metadataPubKey == rhs.metadataPubKey && lhs.deviceMetadataShareIndex == rhs.deviceMetadataShareIndex && lhs.loginTime == rhs.loginTime
+public class CoreKitstate: Codable, Equatable {
+    public static func == (lhs: CoreKitstate, rhs: CoreKitstate) -> Bool {
+        return lhs.factorKey == rhs.factorKey && lhs.metadataPubKey == rhs.metadataPubKey && lhs.deviceMetadataShareIndex == rhs.deviceMetadataShareIndex && lhs.loginTime == rhs.loginTime && lhs.oAuthKey == rhs.oAuthKey
     }
     
     public var factorKey: String? = nil
     public var metadataPubKey: String? = nil
+    public var oAuthKey: String? = nil
 
     // share index used for backup share recovery
     public var deviceMetadataShareIndex: String? = nil
 
     public var loginTime: Date? = nil
 
-    init(factorKey: String? = nil, metadataPubKey: String? = nil, deviceMetadataShareIndex: String? = nil, loginTime: Date? = nil) {
+    init(factorKey: String? = nil, metadataPubKey: String? = nil, deviceMetadataShareIndex: String? = nil, loginTime: Date? = nil, oAuthKey: String? = nil) {
         self.factorKey = factorKey
         self.metadataPubKey = metadataPubKey
         self.deviceMetadataShareIndex = deviceMetadataShareIndex
         self.loginTime = loginTime
+        self.oAuthKey = oAuthKey
     }
 
     // Method to merge data from another instance of MyStruct
-    func merge(with other: CoreKitAppState) {
+    func merge(with other: CoreKitstate) {
         //TODO: Is this supposed to be a potentially partial merge vs a deep copy?
         
         // Update properties based on merging logic

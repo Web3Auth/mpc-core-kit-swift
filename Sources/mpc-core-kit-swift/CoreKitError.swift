@@ -26,8 +26,9 @@ public enum CoreKitError: Error {
     case invalidMetadataPubKey
     case currentFactorNotHashFactor
     case requireUncompressedPublicKey
-    case invalidStore
+    case invalidStore 
     case noTssTags
+    case runtime(_ msg: String)
 
     public var errorDescription: String {
         switch self {
@@ -85,6 +86,8 @@ public enum CoreKitError: Error {
             return "Invalid Store"
         case .noTssTags:
             return "No Tss tags have been set"
+        case .runtime(msg: let msg):
+            return msg
         }
     }
 }

@@ -52,4 +52,31 @@ class Utilities {
     public static func hashMessage(message: String) throws -> String {
         return try TSSHelpers.hashMessage(message: message)
     }
+    
+    internal enum httpMethod {
+        case get
+        case post
+
+        var name: String {
+            switch self {
+            case .get:
+                return "GET"
+            case .post:
+                return "POST"
+            }
+        }
+    }
+    
+    internal static func makeUrlRequest(url: String, httpMethod: httpMethod = .post) throws -> URLRequest {
+        guard
+            let url = URL(string: url)
+        else {
+            throw CoreKitError.runtime("Invalid Url \(url)")
+        }
+        var rq = URLRequest(url: url)
+        rq.httpMethod = httpMethod.name
+        rq.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        rq.addValue("application/json", forHTTPHeaderField: "Accept")
+        return rq
+    }
 }

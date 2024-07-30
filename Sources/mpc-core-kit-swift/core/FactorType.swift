@@ -1,6 +1,6 @@
 import Foundation
 
-public enum FactorType: String {
+public enum FactorType: String, Codable {
     case HashedShare = "hashedShare"
     case SecurityQuestions = "tssSecurityQuestions"
     case DeviceShare = "deviceShare"
