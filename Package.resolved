@@ -41,7 +41,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/torusresearch/fetch-node-details-swift.git",
       "state" : {
-        "revision" : "c8d0121fed49ce761f5946bc30e1aafbe1ac5acb",
+        "revision" : "22bfadf7491d77a0bc1953af002cadbd61383e7d",
         "version" : "6.0.2"
       }
     },
@@ -122,8 +122,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tkey/tkey-mpc-swift",
       "state" : {
-        "revision" : "8fe0cc8d5cc2ad5d38bf068bc29f6af7e3146d08",
-        "version" : "3.0.0"
+        "branch" : "fix/base64-Sep",
+        "revision" : "2ee8d557a19b8bc3771f248c431172be2985ef98"
       }
     },
     {

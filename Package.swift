@@ -15,7 +15,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/vapor/jwt-kit.git", from: "4.0.0"),
         .package(url: "https://github.com/torusresearch/tss-client-swift.git", from: "4.0.0"),
-        .package(url: "https://github.com/tkey/tkey-mpc-swift", from: "3.0.0"),
+        .package(url: "https://github.com/tkey/tkey-mpc-swift", branch: "fix/base64-Sep"),
         .package(url: "https://github.com/torusresearch/customauth-swift-sdk", from: "10.0.1"),
         .package(url: "https://github.com/Web3Auth/single-factor-auth-swift", from: "5.0.0")
     ],
