@@ -86,8 +86,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Web3Auth/single-factor-auth-swift",
       "state" : {
-        "revision" : "73c5066d369c7d2aa1057c56a89b7f1dcdda3270",
-        "version" : "5.0.0"
+        "revision" : "4caaaa858950b25ea420dbba79de6b4c58801db4",
+        "version" : "6.0.0"
       }
     },
     {
