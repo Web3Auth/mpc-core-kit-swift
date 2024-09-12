@@ -160,18 +160,20 @@ public class MpcCoreKit {
         nodeIndexes = keyDetails.nodesData.nodeIndexes.sorted()
 
         let fnd = nodeDetailsManager
+        
         let nodeDetails = try await fnd.getNodeDetails(verifier: verifier, verifierID: verifierId)
-
-        guard let host = nodeDetails.getTorusNodeEndpoints().first else {
-            throw CoreKitError.invalidNode
+        
+        if (self.option.overwriteMetadataUrl != nil) {
+            metadataHostUrl = self.option.overwriteMetadataUrl
+        } else {
+            guard let host = nodeDetails.getTorusNodeEndpoints().first else {
+                throw CoreKitError.invalidNode
+            }
+            guard let metadatahost = URL(string: host)?.host else {
+                throw CoreKitError.invalidMetadataEndpoint
+            }
+            metadataHostUrl = "https://" + metadatahost + "/metadata"
         }
-        guard let metadatahost = URL(string: host)?.host else {
-            throw CoreKitError.invalidMetadataEndpoint
-        }
-        let metadataEndpoint = "https://" + metadatahost + "/metadata"
-
-        // todo : allow overwrite metadataUrl
-        metadataHostUrl = metadataEndpoint
 
         self.nodeDetails = nodeDetails
 
@@ -192,6 +194,10 @@ public class MpcCoreKit {
 
         authSigs = sigs
 
+        guard let metadataEndpoint = metadataHostUrl else {
+            throw "Invalid metadata url endpoint"
+        }
+        
         // initialize tkey
         let storage_layer = try StorageLayer(enable_logging: true, host_url: metadataEndpoint, server_time_offset: 2)
 

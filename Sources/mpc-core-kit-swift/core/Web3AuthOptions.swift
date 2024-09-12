@@ -9,8 +9,10 @@ public class Web3AuthOptions {
     public let sessionTime: Int?
     public let disableHashFactor: Bool
     public let localStorage: ILocalStorage
+    public let overwriteMetadataUrl: String?
     
-    public init(web3AuthClientId: String, manualSync: Bool, web3AuthNetwork: TorusNetwork, localStorage: ILocalStorage, storageKey: String? = "local", sessionTime: Int? = 86000, disableHashFactor: Bool = false) {
+    public init(web3AuthClientId: String, manualSync: Bool, web3AuthNetwork: TorusNetwork, localStorage: ILocalStorage, storageKey: String? = "local", sessionTime: Int? = 86000, disableHashFactor: Bool = false, overwriteMetadataUrl : String? = nil) {
+        
         self.web3AuthClientId = web3AuthClientId
         self.manualSync = manualSync
         self.web3AuthNetwork = web3AuthNetwork
@@ -18,5 +20,6 @@ public class Web3AuthOptions {
         self.sessionTime = sessionTime
         self.localStorage = localStorage
         self.disableHashFactor = disableHashFactor
+        self.overwriteMetadataUrl = overwriteMetadataUrl
     }
 }
