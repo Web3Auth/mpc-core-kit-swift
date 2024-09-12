@@ -15,16 +15,15 @@ import tssClientSwift
 
 extension MpcCoreKit {
     public func getTssPubKey() async throws -> Data {
-        guard let threshold_key = tkey else {
+        guard let thresholdKey = tkey else {
             throw CoreKitError.invalidTKey
         }
-        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
-        if tssTags.isEmpty {
-            throw CoreKitError.noTssTags
+        let selectedTag = try TssModule.get_tss_tag(threshold_key: thresholdKey)
+        let result = try await TssModule.get_tss_pub_key(threshold_key: thresholdKey, tss_tag: selectedTag)
+        guard let res = Data(hexString: result) else {
+            throw "invalid Tss Pub Key"
         }
-        let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        let result = try await TssModule.get_tss_pub_key(threshold_key: threshold_key, tss_tag: selectedTag)
-        return Data(hexString: result)!
+        return res
     }
 
     /// Signing Data without hashing
@@ -36,10 +35,11 @@ extension MpcCoreKit {
         guard let tkey = tkey else {
             throw CoreKitError.invalidTKey
         }
-        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey)
-        if tssTags.isEmpty {
-            throw CoreKitError.noTssTags
+        
+        if factorKey == nil {
+            throw "Invalid factor Key"
         }
+        
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
         // Create tss Client using helper
 
@@ -69,11 +69,6 @@ extension MpcCoreKit {
         guard let threshold_key = tkey else {
             throw CoreKitError.invalidTKey
         }
-        
-        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
-        if tssTags.isEmpty {
-            throw CoreKitError.noTssTags
-        }
         let currentTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
         return try await TssModule.get_all_factor_pub(threshold_key: threshold_key, tss_tag: currentTag)
     }
@@ -88,7 +83,7 @@ extension MpcCoreKit {
     /// additionalMetadata?: Record<string, string>;
     public func createFactor(tssShareIndex: TssShareType, factorKey: String?, factorDescription: FactorType, additionalMetadata: [String: Any] = [:]) async throws -> String {
         // check for index is same as factor key
-        guard let threshold_key = tkey else {
+        guard let thresholdKey = self.tkey else {
             throw CoreKitError.invalidTKey
         }
         guard let curFactorKey = self.factorKey else {
@@ -96,14 +91,8 @@ extension MpcCoreKit {
         }
 
         let newFactor = try factorKey ?? curveSecp256k1.SecretKey().serialize()
-
-        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
-        if tssTags.isEmpty {
-            throw CoreKitError.noTssTags
-        }
-        let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        print(selectedTag, "selected tag")
-        let (tssIndex, _) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: curFactorKey)
+        let selectedTag = try TssModule.get_tss_tag(threshold_key: thresholdKey)
+        let (tssIndex, _) = try await TssModule.get_tss_share(threshold_key: thresholdKey, tss_tag: selectedTag, factorKey: curFactorKey)
         // create new factor if different index
         if tssIndex == String(tssShareIndex.rawValue) {
             try await copyFactor(newFactorKey: newFactor, tssShareIndex: tssShareIndex)
@@ -114,29 +103,23 @@ extension MpcCoreKit {
 
         // backup metadata share using factorKey
         let shareIndex = try getDeviceMetadataShareIndex()
-        try TssModule.backup_share_with_factor_key(threshold_key: threshold_key, shareIndex: shareIndex, factorKey: newFactor)
+        try TssModule.backup_share_with_factor_key(threshold_key: thresholdKey, shareIndex: shareIndex, factorKey: newFactor)
 
         // update description
         let description = createCoreKitFactorDescription(module: FactorType.HashedShare, tssIndex: tssShareIndex, dateAdded: Int(Date().timeIntervalSince1970))
         let jsonStr = try factorDescriptionToJsonStr(dataObj: description)
         let factorPub = try curveSecp256k1.SecretKey(hex: newFactor).toPublic().serialize(compressed: true)
-        try await threshold_key.add_share_description(key: factorPub, description: jsonStr)
+        try await thresholdKey.add_share_description(key: factorPub, description: jsonStr)
 
         return newFactor
     }
 
     public func deleteFactor(deleteFactorPub: String, deleteFactorKey: String? = nil) async throws {
-        guard let threshold_key = tkey, let factorKey = factorKey, let sigs = authSigs else {
+        guard let thresholdKey = tkey, let factorKey = factorKey, let sigs = authSigs else {
             throw CoreKitError.invalidTKey
         }
-        
-        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
-        if tssTags.isEmpty {
-            throw CoreKitError.noTssTags
-        }
-        let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-
-        try await TssModule.delete_factor_pub(threshold_key: threshold_key, tss_tag: selectedTag, factor_key: factorKey, auth_signatures: sigs, delete_factor_pub: deleteFactorPub, nodeDetails: nodeDetails!, torusUtils: torusUtils)
+        let selectedTag = try TssModule.get_tss_tag(threshold_key: thresholdKey)
+        try await TssModule.delete_factor_pub(threshold_key: thresholdKey, tss_tag: selectedTag, factor_key: factorKey, auth_signatures: sigs, delete_factor_pub: deleteFactorPub, nodeDetails: nodeDetails!, torusUtils: torusUtils)
 
         // delete backup metadata share with factorkey
         if let deleteFactorKey = deleteFactorKey {
@@ -146,18 +129,13 @@ extension MpcCoreKit {
                 throw CoreKitError.factorKeyAndFactorPubMismatch
             }
             // set metadata to Not Found
-            try await tkey?.storage_layer_set_metadata(private_key: deleteFactorKey, json: "{ \"message\": \"KEY_NOT_FOUND\" }")
+            try await thresholdKey.storage_layer_set_metadata(private_key: deleteFactorKey, json: "{ \"message\": \"KEY_NOT_FOUND\" }")
         }
     }
 
     private func copyFactor(newFactorKey: String, tssShareIndex: TssShareType) async throws {
         guard let threshold_key = tkey, let factorKey = factorKey else {
             throw CoreKitError.invalidTKey
-        }
-        
-        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
-        if tssTags.isEmpty {
-            throw CoreKitError.noTssTags
         }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
 
@@ -175,11 +153,7 @@ extension MpcCoreKit {
         guard let threshold_key = tkey, let factorKey = factorKey, let sigs = authSigs else {
             throw CoreKitError.invalidTKey
         }
-        
-        let tssTags = try TssModule.get_all_tss_tags(threshold_key: tkey!)
-        if tssTags.isEmpty {
-            throw CoreKitError.noTssTags
-        }
+
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
 
         let newkey = try curveSecp256k1.SecretKey(hex: newFactorKey)
@@ -192,12 +166,12 @@ extension MpcCoreKit {
         try await TssModule.add_factor_pub(threshold_key: threshold_key, tss_tag: selectedTag, factor_key: factorKey, auth_signatures: sigs, new_factor_pub: newFactorPub, new_tss_index: tssShareIndex.rawValue, nodeDetails: nodeDetails!, torusUtils: torusUtils)
     }
 
-    public func enableMFA(enableMFA: MFARecoveryFactor = MFARecoveryFactor()) async throws {
-        if state.metadataPubKey == nil {
+    public func enableMFA() async throws {
+        if self.factorKey == nil {
             throw CoreKitError.invalidMetadataPubKey
         }
 
-        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: state.oAuthKey!, clientID: option.web3AuthClientId)
+        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: self.oAuthKey!, clientID: option.web3AuthClientId)
         let currentFactor = try getCurrentFactorKey()
 
         if currentFactor != hashFactorKey {

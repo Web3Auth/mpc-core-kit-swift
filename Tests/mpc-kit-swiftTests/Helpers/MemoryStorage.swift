@@ -6,8 +6,7 @@ internal class MemoryStorage: ILocalStorage {
 
     public func get(key: String) async throws -> Data {
         guard let result = memory[key] else {
-            throw CoreKitError.notFound(msg: "No value for " + key)
-            // return Data()
+            return Data()
         }
         return result
     }
