@@ -275,12 +275,13 @@ public class MpcCoreKit {
             factorKey = hashFactorKey
             descriptionTypeModule = FactorType.HashedShare
             
-            try TssModule.backup_share_with_factor_key(threshold_key: tkey, shareIndex: shareIndexes[0], factorKey: factorKey)
         } else {
-
             // random generate
             factorKey = try curveSecp256k1.SecretKey().serialize()
             descriptionTypeModule = FactorType.DeviceShare
+            
+            // delete exisiting hashFactor backupshare if available
+            try await self.deleteMetadataShareBackup(factorKey: hashFactorKey)
         }
 
         // derive factor pub
@@ -292,7 +293,7 @@ public class MpcCoreKit {
         let defaultTag = "default"
         try await TssModule.create_tagged_tss_share(threshold_key: tkey, tss_tag: defaultTag, deviceTssShare: nil, factorPub: factorPub, deviceTssIndex: tssIndex.rawValue, nodeDetails: nodeDetails, torusUtils: torusUtils)
 
-
+        try TssModule.backup_share_with_factor_key(threshold_key: tkey, shareIndex: shareIndexes[0], factorKey: factorKey)
         // record share description
         let description = createCoreKitFactorDescription(module: descriptionTypeModule, tssIndex: tssIndex, dateAdded: Int(Date().timeIntervalSince1970))
         let jsonStr = try factorDescriptionToJsonStr(dataObj: description)
