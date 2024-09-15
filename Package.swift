@@ -17,7 +17,7 @@ let package = Package(
         .package(url: "https://github.com/torusresearch/tss-client-swift.git", from: "4.0.0"),
         .package(url: "https://github.com/tkey/tkey-mpc-swift", branch : "update_features" ),
         .package(url: "https://github.com/torusresearch/customauth-swift-sdk", branch : "features_update"),
-        .package(url: "https://github.com/Web3Auth/single-factor-auth-swift", branch :"features_update"),
+        .package(url: "https://github.com/Web3Auth/single-factor-auth-swift", branch :"7.0.0"),
         .package(url: "https://github.com/auth0/JWTDecode.swift", from: "3.1.0")
     ],
     
