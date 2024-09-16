@@ -240,11 +240,11 @@ public class MpcCoreKit {
                 try await inputFactor(factorKey: hashFactor)
                 factorKey = hashFactor
             } else {
-                let factor = try await getDeviceFactor()
-                
-                if allFactorPub.contains(factor) {
-                    try await inputFactor(factorKey: factor)
-                    factorKey = factor
+                let deviceFactor = try await getDeviceFactor()
+                let deviceFactorPub = try SecretKey(hex: deviceFactor).toPublic().serialize(compressed: true)
+                if allFactorPub.contains(deviceFactorPub) {
+                    try await inputFactor(factorKey: deviceFactor)
+                    factorKey = deviceFactor
                 } else {
                     throw CoreKitError.invalidDeviceFactorKey
                 }
