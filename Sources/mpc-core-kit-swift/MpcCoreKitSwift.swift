@@ -236,7 +236,7 @@ public class MpcCoreKit {
             let hashFactorPub = try SecretKey(hex: hashFactor).toPublic().serialize(compressed: true)
             let allFactorPub = try await self.getAllFactorPubs()
             
-            if option.disableHashFactor == false && !allFactorPub.contains(hashFactorPub){
+            if option.disableHashFactor == false && allFactorPub.contains(hashFactorPub){
                 try await inputFactor(factorKey: hashFactor)
                 factorKey = hashFactor
             } else {
