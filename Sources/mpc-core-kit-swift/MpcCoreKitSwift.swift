@@ -241,9 +241,13 @@ public class MpcCoreKit {
                 factorKey = hashFactor
             } else {
                 let factor = try await getDeviceFactor()
-                // TODO: factors need to be verified before insertion
-                try await inputFactor(factorKey: factor)
-                factorKey = factor
+                
+                if allFactorPub.contains(factor) {
+                    try await inputFactor(factorKey: factor)
+                    factorKey = factor
+                } else {
+                    throw CoreKitError.invalidDeviceFactorKey
+                }
             }
             
             self.deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: thresholdKey, factor_key: factorKey!)
