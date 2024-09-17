@@ -14,13 +14,16 @@ import tssClientSwift
 #endif
 
 extension MpcCoreKit {
-    public func getTssPubKey() async throws -> Data {
+    public func getTssPubKey() throws -> Data {
         guard let thresholdKey = tkey else {
             throw CoreKitError.invalidTKey
         }
-        let selectedTag = try TssModule.get_tss_tag(threshold_key: thresholdKey)
-        let result = try await TssModule.get_tss_pub_key(threshold_key: thresholdKey, tss_tag: selectedTag)
-        guard let res = Data(hexString: result) else {
+        
+        guard let tssPubKey = self.tssPubKey else {
+            throw "invalid Tss Pub Key"
+        }
+        
+        guard let res = Data(hexString: tssPubKey) else {
             throw "invalid Tss Pub Key"
         }
         return res
