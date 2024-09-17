@@ -15,6 +15,11 @@ import TorusUtils
 public class MpcCoreKit {
     internal var selectedTag: String?
     internal var factorKey: String?
+    internal var tssShare: String?
+    internal var tssIndex: String?
+    
+    internal var tssPubKey: String?
+    
     internal var userInfo: [String:Any]
     internal var option: Web3AuthOptions
 //    internal var state: CoreKitstate
@@ -133,7 +138,8 @@ public class MpcCoreKit {
         }
         let tssTag = try TssModule.get_tss_tag(threshold_key: tkey!)
         let tssPubKey = try await TssModule.get_tss_pub_key(threshold_key: tkey!, tss_tag: tssTag)
-
+        self.tssPubKey = tssPubKey
+        
         let factorsCount = try await getAllFactorPubs().count
         let keyDetails = MpcKeyDetails(
             tssPubKey: tssPubKey,
@@ -220,7 +226,6 @@ public class MpcCoreKit {
         } else {
             try await newUser()
         }
-
         return try await self.getKeyDetails()
     }
 
@@ -314,6 +319,12 @@ public class MpcCoreKit {
         
         self.metadataPubKey = try tkey.get_key_details().pub_key.getPublicKey(format: .EllipticCompress)
         
+        let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
+        let (tssIndexStr, tssShare) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selectedTag, factorKey: factorKey)
+        
+        self.tssIndex = tssIndexStr
+        self.tssShare = tssShare
+        
         // save as device factor if hashfactor is disable
         if option.disableHashFactor == true {
             try await setDeviceFactor(factorKey: factorKey)
@@ -361,8 +372,10 @@ public class MpcCoreKit {
         // setup tkey ( assuming only 2 factor is required)
         let _ = try await threshold_key.reconstruct()
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        let _ = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey)
+        let (tssIndex, tssShare) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey)
         self.factorKey = factorKey
+        self.tssShare = tssShare
+        self.tssIndex = tssIndex
     }
 
     public func publicKey() async throws -> String {
@@ -496,20 +509,6 @@ extension MpcCoreKit {
         let payload = try JSONSerialization.data(withJSONObject: input)
         
         try await tkey!.add_share_description(key: factorPub, description: String(data: payload, encoding: .utf8)!, update_metadata: updateMetadata)
-    }
-    
-    private func setupProvider() {
-        // requires signing provider
-    }
-    
-//    private func updateState(updates: CoreKitstate) async throws {
-//        self.state.merge(with: updates)
-////        let jsonState = try JSONEncoder().encode(state)
-////        try await coreKitStorage.set(key: localstateKey, payload: jsonState)
-//    }
-    
-    private func resetState() {
-        self.tkey = nil
     }
     
     private func getOAuthKey(result: TorusKey) -> String {

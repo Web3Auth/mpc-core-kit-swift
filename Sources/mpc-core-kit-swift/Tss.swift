@@ -27,7 +27,7 @@ extension MpcCoreKit {
     }
 
     /// Signing Data without hashing
-    public func tssSign(message: Data) async throws -> Data {
+    public func tssSign(message: Data) throws -> Data {
         guard let authSigs = authSigs else {
             throw CoreKitError.invalidAuthSignatures
         }
@@ -43,7 +43,7 @@ extension MpcCoreKit {
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
         // Create tss Client using helper
 
-        let (client, coeffs) = try await bootstrapTssClient(selected_tag: selectedTag)
+        let (client, coeffs) = try bootstrapTssClient(selected_tag: selectedTag)
 
         // Wait for sockets to be connected
         let connected = try client.checkConnected()
@@ -199,22 +199,19 @@ extension MpcCoreKit {
         return recovery
     }
 
-    private func bootstrapTssClient(selected_tag: String) async throws -> (TSSClient, [String: String]) {
+    private func bootstrapTssClient(selected_tag: String) throws -> (TSSClient, [String: String]) {
         guard let tkey = tkey else {
             throw CoreKitError.invalidTKey
         }
 
-        guard let verifier = verifier, let verifierId = verifierId, let tssEndpoints = tssEndpoints, let factorKey = factorKey, let nodeIndexes = nodeIndexes else {
+        guard let verifier = verifier, let verifierId = verifierId, let tssEndpoints = tssEndpoints, let nodeIndexes = nodeIndexes,
+        let tssShare = tssShare, let tssIndex = tssIndex, let tssPubKey = tssPubKey else {
             throw CoreKitError.invalidInput
         }
 
         let tssNonce = try TssModule.get_tss_nonce(threshold_key: tkey, tss_tag: selected_tag)
 
-        let compressed = try await TssModule.get_tss_pub_key(threshold_key: tkey, tss_tag: selected_tag)
-
-        let publicKey = try curveSecp256k1.PublicKey(hex: compressed).serialize(compressed: false)
-
-        let (tssIndex, tssShare) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selected_tag, factorKey: factorKey)
+        let publicKey = try curveSecp256k1.PublicKey(hex: tssPubKey ).serialize(compressed: false)
 
         if publicKey.count < 128 || publicKey.count > 130 {
             throw CoreKitError.requireUncompressedPublicKey

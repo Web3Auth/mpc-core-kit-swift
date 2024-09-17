@@ -116,7 +116,7 @@ final class mpc_kit_swiftTests: XCTestCase {
 
         let _ = try await coreKitInstance.loginWithJwt(verifier: verifier, verifierId: email, idToken: token)
         let hash = try keccak256(data: Data(hexString: "010203040506")!)
-        let signatures = try await coreKitInstance.tssSign(message: hash)
+        let signatures = try coreKitInstance.tssSign(message: hash)
         
         let newFactor = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: ["my": "mymy"])
 
@@ -161,6 +161,6 @@ final class mpc_kit_swiftTests: XCTestCase {
         XCTAssertEqual(verifierId, email)
 
         let hash2 = try Data(hexString: "010203040506")!.sha3(varient: Variants.KECCAK256)
-        _ = try await coreKitInstance2.tssSign(message: hash2)
+        _ = try coreKitInstance2.tssSign(message: hash2)
     }
 }
