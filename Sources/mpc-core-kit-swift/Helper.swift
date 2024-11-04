@@ -1,7 +1,6 @@
 import BigInt
 import FetchNodeDetails
 import Foundation
-import SingleFactorAuth
 
 #if canImport(tkey)
     import tkey

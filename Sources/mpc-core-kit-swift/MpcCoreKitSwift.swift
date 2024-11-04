@@ -1,7 +1,6 @@
 import CustomAuth
 import FetchNodeDetails
 import Foundation
-import SingleFactorAuth
 import TorusUtils
 
 #if canImport(tkey)
@@ -21,7 +20,7 @@ public class MpcCoreKit {
     internal var tssPubKey: String?
     
     internal var userInfo: [String:Any]
-    internal var option: Web3AuthOptions
+    internal var option: CoreKitWeb3AuthOptions
 //    internal var state: CoreKitstate
     
     
@@ -49,7 +48,7 @@ public class MpcCoreKit {
     private let customAuth: CustomAuth
 
     
-    public init(options: Web3AuthOptions) throws {
+    public init(options: CoreKitWeb3AuthOptions) throws {
         if options.web3AuthClientId.isEmpty {
             throw CoreKitError.invalidInput
         }
@@ -111,9 +110,10 @@ public class MpcCoreKit {
         return mnemonic
     }
 
+    
     public func loginWithJwt(verifier: String, verifierId: String, idToken: String) async throws -> MpcKeyDetails {
-        let singleFactor = try SingleFactorAuth(singleFactorAuthArgs: SingleFactorAuthArgs(web3AuthClientId: option.web3AuthClientId, network: option.web3AuthNetwork))
-        let torusKey = try await singleFactor.getTorusKey(loginParams: LoginParams(verifier: verifier, verifierId: verifierId, idToken: idToken))
+    
+        let torusKey = try await customAuth.getTorusKey(verifier: verifier, verifier_id: verifierId, verifierParams: VerifierParams(verifier_id: verifierId), idToken: idToken)
         
         let result = try await login(keyDetails: torusKey, verifier: verifier, verifierId: verifierId)
         
@@ -183,7 +183,7 @@ public class MpcCoreKit {
 
         self.nodeDetails = nodeDetails
 
-        tssEndpoints = nodeDetails.torusNodeTSSEndpoints
+        tssEndpoints = nodeDetails.getTorusNodeTSSEndpoints()
 
         guard let postboxkey = self.oAuthKey else {
             throw CoreKitError.invalidPostboxKey
@@ -201,7 +201,7 @@ public class MpcCoreKit {
         authSigs = sigs
 
         guard let metadataEndpoint = metadataHostUrl else {
-            throw "Invalid metadata url endpoint"
+            throw CoreKitError.invalidInput
         }
         
         // initialize tkey
@@ -360,7 +360,7 @@ public class MpcCoreKit {
         let allFactorPubs = try await self.getAllFactorPubs()
         let factorPub = try SecretKey(hex: factorKey).toPublic().serialize(compressed: true)
         if (!allFactorPubs.contains(factorPub)) {
-            throw "Invalid factor \(factorKey)"
+            throw CoreKitError.invalidFactorKey
         }
         
         // input factor

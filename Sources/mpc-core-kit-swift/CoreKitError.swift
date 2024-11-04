@@ -29,6 +29,7 @@ public enum CoreKitError: Error {
     case invalidStore 
     case noTssTags
     case invalidDeviceFactorKey
+    case invalidTssPubKey
     case runtime(_ msg: String)
 
     public var errorDescription: String {
@@ -91,6 +92,8 @@ public enum CoreKitError: Error {
             return "Device factor key not found"
         case .runtime(msg: let msg):
             return msg
+        case .invalidTssPubKey:
+            return "Invalid tss public key"
         }
     }
 }

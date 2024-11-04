@@ -1,5 +1,4 @@
 import Foundation
-import SingleFactorAuth
 
 #if canImport(tkey)
     import tkey

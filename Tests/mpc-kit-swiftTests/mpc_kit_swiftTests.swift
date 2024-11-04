@@ -2,7 +2,6 @@ import curveSecp256k1
 import JWTKit
 import FetchNodeDetails
 import mpc_core_kit_swift
-import SingleFactorAuth
 import XCTest
 
 // JWT payload structure.
@@ -91,7 +90,7 @@ func mockLogin2(email: String) throws -> String {
 
 final class mpc_kit_swiftTests: XCTestCase {
     func resetMPC(email: String, verifier: String, clientId: String) async throws {
-        let coreKitInstance = try MpcCoreKit(options: Web3AuthOptions(web3AuthClientId: clientId, manualSync: true, web3AuthNetwork: .sapphire(.SAPPHIRE_DEVNET), localStorage: MemoryStorage(), disableHashFactor: false))
+        let coreKitInstance = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: true, web3AuthNetwork: .SAPPHIRE_DEVNET, localStorage: MemoryStorage(), disableHashFactor: false))
         let data = try mockLogin2(email: email)
         let token = data
 
@@ -109,14 +108,14 @@ final class mpc_kit_swiftTests: XCTestCase {
         
         let memoryStorage = MemoryStorage()
         
-        let coreKitInstance = try MpcCoreKit(options: Web3AuthOptions(web3AuthClientId: clientId, manualSync: true, web3AuthNetwork: .sapphire(.SAPPHIRE_DEVNET), localStorage: memoryStorage, disableHashFactor: false))
+        let coreKitInstance = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: true, web3AuthNetwork: .SAPPHIRE_DEVNET, localStorage: memoryStorage, disableHashFactor: false))
 
         let data = try mockLogin2(email: email)
         let token = data
 
         let _ = try await coreKitInstance.loginWithJwt(verifier: verifier, verifierId: email, idToken: token)
         let hash = try keccak256(data: Data(hexString: "010203040506")!)
-        let signatures = try coreKitInstance.tssSign(message: hash)
+        _ = try coreKitInstance.tssSign(message: hash)
         
         let newFactor = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: ["my": "mymy"])
 
@@ -132,7 +131,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         // reset Account
         try await resetMPC(email: email, verifier: verifier, clientId: clientId)
         let memoryStorage = MemoryStorage()
-        let coreKitInstance = try MpcCoreKit(options: Web3AuthOptions(web3AuthClientId: clientId, manualSync: false, web3AuthNetwork: .sapphire(.SAPPHIRE_DEVNET), localStorage: memoryStorage, disableHashFactor: false))
+        let coreKitInstance = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: false, web3AuthNetwork: .SAPPHIRE_DEVNET, localStorage: memoryStorage, disableHashFactor: false))
         let data = try mockLogin2(email: email)
         let token = data
 
@@ -141,7 +140,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         let recoveryFactor = try await coreKitInstance.enableMFAWithRecoveryFactor()
 
         let memoryStorage2 = MemoryStorage()
-        let coreKitInstance2 = try MpcCoreKit(options: Web3AuthOptions(web3AuthClientId: clientId, manualSync: false, web3AuthNetwork: .sapphire(.SAPPHIRE_DEVNET), localStorage: memoryStorage2, disableHashFactor: false))
+        let coreKitInstance2 = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: false, web3AuthNetwork: .SAPPHIRE_DEVNET, localStorage: memoryStorage2, disableHashFactor: false))
         let data2 = try mockLogin2(email: email)
         let token2 = data2
 

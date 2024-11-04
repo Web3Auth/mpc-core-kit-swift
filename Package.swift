@@ -14,11 +14,10 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/vapor/jwt-kit.git", from: "4.0.0"),
-        .package(url: "https://github.com/torusresearch/tss-client-swift.git", from: "4.0.0"),
-        .package(url: "https://github.com/tkey/tkey-mpc-swift", branch : "update_features" ),
-        .package(url: "https://github.com/torusresearch/customauth-swift-sdk", branch : "features_update"),
-        .package(url: "https://github.com/Web3Auth/single-factor-auth-swift", branch :"7.0.0"),
-        .package(url: "https://github.com/auth0/JWTDecode.swift", from: "3.1.0")
+        .package(url: "https://github.com/torusresearch/tss-client-swift.git", from: "5.0.0"),
+        .package(url: "https://github.com/tkey/tkey-mpc-swift", branch : "encapsulate_torusnetwork" ), // 4.0.0
+        .package(url: "https://github.com/torusresearch/customauth-swift-sdk", from: "11.0.1"),
+        .package(url: "https://github.com/auth0/JWTDecode.swift", from: "3.2.0")
     ],
     
     targets: [
@@ -28,7 +27,6 @@ let package = Package(
             name: "mpc-core-kit-swift",
             dependencies: [
                 .product(name: "CustomAuth", package: "customauth-swift-sdk"),
-                .product(name: "SingleFactorAuth", package: "single-factor-auth-swift"),
                 .product(name: "tkey", package: "tkey-mpc-swift" ),
                 .product(name: "tssClientSwift", package: "tss-client-swift" ),
                 .product(name: "JWTDecode", package: "JWTDecode.swift")

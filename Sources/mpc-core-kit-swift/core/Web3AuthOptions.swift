@@ -1,7 +1,7 @@
 import Foundation
-import SingleFactorAuth
+import FetchNodeDetails
 
-public class Web3AuthOptions {
+public class CoreKitWeb3AuthOptions {
     public let web3AuthClientId: String
     public let manualSync: Bool
     public let web3AuthNetwork: Web3AuthNetwork

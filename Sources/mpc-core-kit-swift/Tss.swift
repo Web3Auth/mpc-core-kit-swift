@@ -15,16 +15,16 @@ import tssClientSwift
 
 extension MpcCoreKit {
     public func getTssPubKey() throws -> Data {
-        guard let thresholdKey = tkey else {
+        guard tkey != nil else {
             throw CoreKitError.invalidTKey
         }
         
         guard let tssPubKey = self.tssPubKey else {
-            throw "invalid Tss Pub Key"
+            throw CoreKitError.invalidTssPubKey
         }
         
         guard let res = Data(hexString: tssPubKey) else {
-            throw "invalid Tss Pub Key"
+            throw CoreKitError.invalidTssPubKey
         }
         return res
     }
@@ -40,7 +40,7 @@ extension MpcCoreKit {
         }
         
         if factorKey == nil {
-            throw "Invalid factor Key"
+            throw CoreKitError.invalidFactorKey
         }
         
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)

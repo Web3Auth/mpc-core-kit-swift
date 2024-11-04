@@ -9,7 +9,7 @@ public class DeviceFactorStorage: IFactorStorage {
 
     public func setFactor(metadataPubKey: String, factorKey: String) async throws {
         guard let factorKeyData = Data(hexString: factorKey) else {
-            throw "invalid factorKey"
+            throw CoreKitError.invalidFactorKey
         }
         try await storage.set(key: metadataPubKey, payload: factorKeyData)
     }
