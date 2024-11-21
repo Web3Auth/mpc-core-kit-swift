@@ -112,7 +112,6 @@ public class MpcCoreKit {
     public func loginWithJwt(verifier: String, verifierId: String, idToken: String) async throws -> MpcKeyDetails {
     
         let parsedToken = try decode(jwt: idToken)
-        let verifierIDToken = parsedToken.subject;
 
         let torusKey = try await customAuth.getTorusKey(verifier: verifier, verifier_id: verifierId, verifierParams: VerifierParams(verifier_id: verifierId), idToken: idToken)
         
