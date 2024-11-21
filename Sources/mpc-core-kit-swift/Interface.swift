@@ -8,7 +8,7 @@ public class CoreKitstate: Codable, Equatable {
     public static func == (lhs: CoreKitstate, rhs: CoreKitstate) -> Bool {
         return lhs.factorKey == rhs.factorKey && lhs.metadataPubKey == rhs.metadataPubKey && lhs.deviceMetadataShareIndex == rhs.deviceMetadataShareIndex && lhs.loginTime == rhs.loginTime && lhs.oAuthKey == rhs.oAuthKey
     }
-    
+
     public var factorKey: String? = nil
     public var metadataPubKey: String? = nil
     public var oAuthKey: String? = nil
@@ -28,8 +28,8 @@ public class CoreKitstate: Codable, Equatable {
 
     // Method to merge data from another instance of MyStruct
     func merge(with other: CoreKitstate) {
-        //TODO: Is this supposed to be a potentially partial merge vs a deep copy?
-        
+        // TODO: Is this supposed to be a potentially partial merge vs a deep copy?
+
         // Update properties based on merging logic
         if other.factorKey != nil {
             factorKey = other.factorKey
@@ -95,4 +95,3 @@ public struct IdTokenLoginParams: Codable {
 
     public var domain: String?
 }
-

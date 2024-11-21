@@ -1,9 +1,9 @@
 import BigInt
-import UIKit
 import CustomAuth
 import Foundation
 import TorusUtils
 import tssClientSwift
+import UIKit
 
 #if canImport(tkey)
     import tkey
@@ -18,11 +18,11 @@ extension MpcCoreKit {
         guard tkey != nil else {
             throw CoreKitError.invalidTKey
         }
-        
-        guard let tssPubKey = self.tssPubKey else {
+
+        guard let tssPubKey = tssPubKey else {
             throw CoreKitError.invalidTssPubKey
         }
-        
+
         guard let res = Data(hexString: tssPubKey) else {
             throw CoreKitError.invalidTssPubKey
         }
@@ -38,11 +38,11 @@ extension MpcCoreKit {
         guard let tkey = tkey else {
             throw CoreKitError.invalidTKey
         }
-        
+
         if factorKey == nil {
             throw CoreKitError.invalidFactorKey
         }
-        
+
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
         // Create tss Client using helper
 
@@ -86,7 +86,7 @@ extension MpcCoreKit {
     /// additionalMetadata?: Record<string, string>;
     public func createFactor(tssShareIndex: TssShareType, factorKey: String?, factorDescription: FactorType, additionalMetadata: [String: Any] = [:]) async throws -> String {
         // check for index is same as factor key
-        guard let thresholdKey = self.tkey else {
+        guard let thresholdKey = tkey else {
             throw CoreKitError.invalidTKey
         }
         guard let curFactorKey = self.factorKey else {
@@ -170,11 +170,11 @@ extension MpcCoreKit {
     }
 
     public func enableMFA() async throws {
-        if self.factorKey == nil {
+        if factorKey == nil {
             throw CoreKitError.invalidMetadataPubKey
         }
 
-        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: self.oAuthKey!, clientID: option.web3AuthClientId)
+        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: oAuthKey!, clientID: option.web3AuthClientId)
         let currentFactor = try getCurrentFactorKey()
 
         if currentFactor != hashFactorKey {
@@ -208,13 +208,13 @@ extension MpcCoreKit {
         }
 
         guard let verifier = verifier, let verifierId = verifierId, let tssEndpoints = tssEndpoints, let nodeIndexes = nodeIndexes,
-        let tssShare = tssShare, let tssIndex = tssIndex, let tssPubKey = tssPubKey else {
+              let tssShare = tssShare, let tssIndex = tssIndex, let tssPubKey = tssPubKey else {
             throw CoreKitError.invalidInput
         }
 
         let tssNonce = try TssModule.get_tss_nonce(threshold_key: tkey, tss_tag: selected_tag)
 
-        let publicKey = try curveSecp256k1.PublicKey(hex: tssPubKey ).serialize(compressed: false)
+        let publicKey = try curveSecp256k1.PublicKey(hex: tssPubKey).serialize(compressed: false)
 
         if publicKey.count < 128 || publicKey.count > 130 {
             throw CoreKitError.requireUncompressedPublicKey

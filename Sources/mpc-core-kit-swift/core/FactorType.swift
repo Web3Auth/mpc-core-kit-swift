@@ -5,7 +5,7 @@ public enum FactorType: String, Codable {
     case SecurityQuestions = "tssSecurityQuestions"
     case DeviceShare = "deviceShare"
     case SeedPhrase = "seedPhrase"
-    case PasswordShare =  "passwordShare"
+    case PasswordShare = "passwordShare"
     case SocialShare = "socialShare"
-    case Other = "Other"
+    case Other
 }

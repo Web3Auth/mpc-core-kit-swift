@@ -7,7 +7,7 @@ public class SetSecurityQuestionParams: Codable {
     public var description: String?
     public var tssIndex: TssShareType
     public var tssTag: String
-    
+
     public init(question: String, answer: String, shareType: TssShareType = TssShareType.recovery, description: String? = nil, tssIndex: TssShareType, tssTag: String) {
         self.question = question
         self.answer = answer

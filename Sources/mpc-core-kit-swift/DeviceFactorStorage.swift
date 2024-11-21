@@ -19,4 +19,3 @@ public class DeviceFactorStorage: IFactorStorage {
         return localMetadata.hexString
     }
 }
-

@@ -1,8 +1,8 @@
 import CustomAuth
 import FetchNodeDetails
 import Foundation
-import TorusUtils
 import JWTDecode
+import TorusUtils
 
 #if canImport(tkey)
     import tkey
@@ -17,19 +17,18 @@ public class MpcCoreKit {
     internal var factorKey: String?
     internal var tssShare: String?
     internal var tssIndex: String?
-    
+
     internal var tssPubKey: String?
-    
+
     internal var userInfo: UserInfo?
     internal var option: CoreKitWeb3AuthOptions
-    //internal var state: CoreKitstate
-    
-    
-    public var metadataPubKey: String? = nil
-    public var oAuthKey: String? = nil
+    // internal var state: CoreKitstate
+
+    public var metadataPubKey: String?
+    public var oAuthKey: String?
     // share index used for backup share recovery
-    public var deviceMetadataShareIndex: String? = nil
-    public var loginTime: Date? = nil
+    public var deviceMetadataShareIndex: String?
+    public var loginTime: Date?
 
     public var metadataHostUrl: String?
     public var tkey: ThresholdKey?
@@ -42,39 +41,38 @@ public class MpcCoreKit {
     public var nodeDetails: AllNodeDetailsModel?
     public var nodeDetailsManager: NodeDetailManager
     public var sigs: [String]?
-    
+
     public var coreKitStorage: CoreKitStorage
     private let storeKey = "corekitStore"
     private let localstateKey = "localstate"
     private let customAuth: CustomAuth
 
-    
     public init(options: CoreKitWeb3AuthOptions) throws {
         if options.web3AuthClientId.isEmpty {
             throw CoreKitError.invalidInput
         }
-        self.option = options
+        option = options
 
-        self.nodeDetailsManager = NodeDetailManager(network: option.web3AuthNetwork)
+        nodeDetailsManager = NodeDetailManager(network: option.web3AuthNetwork)
         let torusOptions = TorusOptions(clientId: option.web3AuthClientId, network: option.web3AuthNetwork, enableOneKey: true)
-        self.torusUtils = try TorusUtils(params: torusOptions)
+        torusUtils = try TorusUtils(params: torusOptions)
 
-        self.coreKitStorage = CoreKitStorage(storeKey: storeKey, storage: option.localStorage)
+        coreKitStorage = CoreKitStorage(storeKey: storeKey, storage: option.localStorage)
 
         let config = CustomAuthArgs(urlScheme: "tdsdk://tdsdk/oauthCallback", network: option.web3AuthNetwork, enableOneKey: true, web3AuthClientId: option.web3AuthClientId)
-        self.customAuth = try CustomAuth(config: config)
-        self.userInfo = nil
+        customAuth = try CustomAuth(config: config)
+        userInfo = nil
     }
 
     public func getCurrentFactorKey() throws -> String {
-        guard let factor = self.factorKey else {
+        guard let factor = factorKey else {
             throw CoreKitError.factorKeyUnavailable
         }
         return factor
     }
 
     public func getDeviceMetadataShareIndex() throws -> String {
-        guard let shareIndex = self.deviceMetadataShareIndex else {
+        guard let shareIndex = deviceMetadataShareIndex else {
             throw CoreKitError.notFound(msg: "share index not found")
         }
         return shareIndex
@@ -84,17 +82,17 @@ public class MpcCoreKit {
         let loginResponse = try await customAuth.triggerLogin(args: singleLoginParams)
 
         let result = try await login(keyDetails: loginResponse.torusKey, verifier: loginResponse.singleVerifierResponse.userInfo.verifier, verifierId: loginResponse.singleVerifierResponse.userInfo.verifierId)
-        self.userInfo = loginResponse.singleVerifierResponse.userInfo
-        
+        userInfo = loginResponse.singleVerifierResponse.userInfo
+
         return result
     }
 
     public func loginWithOAuth(aggregateLoginParams: AggregateLoginParams) async throws -> MpcKeyDetails {
         let loginResponse = try await customAuth.triggerAggregateLogin(args: aggregateLoginParams)
         let result = try await login(keyDetails: loginResponse.torusKey, verifier: loginResponse.torusAggregateVerifierResponse.first!.userInfo.verifier, verifierId: loginResponse.torusAggregateVerifierResponse.first!.userInfo.verifierId)
-        
-        self.userInfo = loginResponse.torusAggregateVerifierResponse.first?.userInfo
-        
+
+        userInfo = loginResponse.torusAggregateVerifierResponse.first?.userInfo
+
         return result
     }
 
@@ -108,20 +106,18 @@ public class MpcCoreKit {
         return mnemonic
     }
 
-    
     public func loginWithJwt(verifier: String, verifierId: String, idToken: String) async throws -> MpcKeyDetails {
-    
         let parsedToken = try decode(jwt: idToken)
 
         let torusKey = try await customAuth.getTorusKey(verifier: verifier, verifier_id: verifierId, verifierParams: VerifierParams(verifier_id: verifierId), idToken: idToken)
-        
+
         let result = try await login(keyDetails: torusKey, verifier: verifier, verifierId: verifierId)
-        
+
         // TODO: Make constructor public in customauth for TorusGenericContainer
         let encodedEmptyState = "7b22706172616d73223a7b7d7d"
         let state = try! JSONDecoder().decode(TorusGenericContainer.self, from: Data(hexString: encodedEmptyState)!)
-        self.userInfo = UserInfo(email: parsedToken.body["email"] as? String ?? "", name: parsedToken.body["name"] as? String ?? "", profileImage: parsedToken.body["picture"] as? String ?? "", aggregateVerifier: nil, verifier: verifier, verifierId: verifierId, typeOfLogin: .jwt, idToken: idToken, state: state)
-        
+        userInfo = UserInfo(email: parsedToken.body["email"] as? String ?? "", name: parsedToken.body["name"] as? String ?? "", profileImage: parsedToken.body["picture"] as? String ?? "", aggregateVerifier: nil, verifier: verifier, verifierId: verifierId, typeOfLogin: .jwt, idToken: idToken, state: state)
+
         return result
     }
 
@@ -140,12 +136,12 @@ public class MpcCoreKit {
         let tssTag = try TssModule.get_tss_tag(threshold_key: tkey!)
         let tssPubKey = try await TssModule.get_tss_pub_key(threshold_key: tkey!, tss_tag: tssTag)
         self.tssPubKey = tssPubKey
-        
+
         let factorsCount = try await getAllFactorPubs().count
         let keyDetails = MpcKeyDetails(
             tssPubKey: tssPubKey,
             metadataPubKey: try finalKeyDetails.pub_key.getPublicKey(format: PublicKeyEncoding.FullAddress),
-            requiredFactors: self.factorKey == nil ? 1 : 0,  // assuming we 2/n
+            requiredFactors: factorKey == nil ? 1 : 0, // assuming we 2/n
             threshold: finalKeyDetails.threshold,
             shareDescriptions: finalKeyDetails.share_descriptions,
             totalShares: finalKeyDetails.total_shares,
@@ -158,20 +154,20 @@ public class MpcCoreKit {
     // with factor key if new user
     // with required factor > 0 if existing user
     private func login(keyDetails: TorusKey, verifier: String, verifierId: String) async throws -> MpcKeyDetails {
-        self.oAuthKey = getOAuthKey(result: keyDetails)
-        
+        oAuthKey = getOAuthKey(result: keyDetails)
+
         self.verifier = verifier
         self.verifierId = verifierId
-        
+
         // get from service provider/ torusUtils
         nodeIndexes = keyDetails.nodesData.nodeIndexes.sorted()
 
         let fnd = nodeDetailsManager
-        
+
         let nodeDetails = try await fnd.getNodeDetails(verifier: verifier, verifierID: verifierId)
-        
-        if (self.option.overwriteMetadataUrl != nil) {
-            metadataHostUrl = self.option.overwriteMetadataUrl
+
+        if option.overwriteMetadataUrl != nil {
+            metadataHostUrl = option.overwriteMetadataUrl
         } else {
             guard let host = nodeDetails.getTorusNodeEndpoints().first else {
                 throw CoreKitError.invalidNode
@@ -186,7 +182,7 @@ public class MpcCoreKit {
 
         tssEndpoints = nodeDetails.getTorusNodeTSSEndpoints()
 
-        guard let postboxkey = self.oAuthKey else {
+        guard let postboxkey = oAuthKey else {
             throw CoreKitError.invalidPostboxKey
         }
 
@@ -204,7 +200,7 @@ public class MpcCoreKit {
         guard let metadataEndpoint = metadataHostUrl else {
             throw CoreKitError.invalidInput
         }
-        
+
         // initialize tkey
         let storage_layer = try StorageLayer(enable_logging: true, host_url: metadataEndpoint, server_time_offset: 2)
 
@@ -212,37 +208,37 @@ public class MpcCoreKit {
 
         let rss_comm = try RssComm()
 
-        self.tkey = try ThresholdKey(
+        tkey = try ThresholdKey(
             storage_layer: storage_layer,
             service_provider: service_provider,
             enable_logging: true,
             manual_sync: option.manualSync,
             rss_comm: rss_comm)
 
-        let key_details = try await self.tkey!.initialize(never_initialize_new_key: false, include_local_metadata_transitions: false)
-        self.metadataPubKey = try key_details.pub_key.getPublicKey(format: .EllipticCompress)
+        let key_details = try await tkey!.initialize(never_initialize_new_key: false, include_local_metadata_transitions: false)
+        metadataPubKey = try key_details.pub_key.getPublicKey(format: .EllipticCompress)
 
         if key_details.required_shares > 0 {
             try await existingUser()
         } else {
             try await newUser()
         }
-        return try await self.getKeyDetails()
+        return try await getKeyDetails()
     }
 
     private func existingUser() async throws {
         guard let thresholdKey = tkey else {
             throw CoreKitError.invalidTKey
         }
-        
+
         do {
             // try check for hash factor
-            
-            let hashFactor = try Utilities.getHashedPrivateKey(postboxKey: self.oAuthKey!, clientID: option.web3AuthClientId)
+
+            let hashFactor = try Utilities.getHashedPrivateKey(postboxKey: oAuthKey!, clientID: option.web3AuthClientId)
             let hashFactorPub = try SecretKey(hex: hashFactor).toPublic().serialize(compressed: true)
-            let allFactorPub = try await self.getAllFactorPubs()
-            
-            if option.disableHashFactor == false && allFactorPub.contains(hashFactorPub){
+            let allFactorPub = try await getAllFactorPubs()
+
+            if option.disableHashFactor == false && allFactorPub.contains(hashFactorPub) {
                 try await inputFactor(factorKey: hashFactor)
                 factorKey = hashFactor
             } else {
@@ -255,9 +251,9 @@ public class MpcCoreKit {
                     throw CoreKitError.invalidDeviceFactorKey
                 }
             }
-            
-            self.deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: thresholdKey, factor_key: factorKey!)
-            self.metadataPubKey = try thresholdKey.get_key_details().pub_key.getPublicKey(format: .EllipticCompress)
+
+            deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: thresholdKey, factor_key: factorKey!)
+            metadataPubKey = try thresholdKey.get_key_details().pub_key.getPublicKey(format: .EllipticCompress)
 
         } catch {
             // Note: TODO: Ignored error here.
@@ -274,7 +270,6 @@ public class MpcCoreKit {
 
         let _ = try await tkey.reconstruct()
 
-        
         // backup metadata share using factorKey
         // finding device share index
         var shareIndexes = try tkey.get_shares_indexes()
@@ -285,19 +280,19 @@ public class MpcCoreKit {
         let factorKey: String
         let descriptionTypeModule: FactorType
 
-        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: self.oAuthKey!, clientID: option.web3AuthClientId)
-        
+        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: oAuthKey!, clientID: option.web3AuthClientId)
+
         if option.disableHashFactor == false {
             factorKey = hashFactorKey
             descriptionTypeModule = FactorType.HashedShare
-            
+
         } else {
             // random generate
             factorKey = try curveSecp256k1.SecretKey().serialize()
             descriptionTypeModule = FactorType.DeviceShare
-            
+
             // delete exisiting hashFactor backupshare if available
-            try await self.deleteMetadataShareBackup(factorKey: hashFactorKey)
+            try await deleteMetadataShareBackup(factorKey: hashFactorKey)
         }
 
         // derive factor pub
@@ -316,16 +311,16 @@ public class MpcCoreKit {
         try await tkey.add_share_description(key: factorPub, description: jsonStr)
 
         self.factorKey = factorKey
-        self.deviceMetadataShareIndex = shareIndexes[0]
-        
-        self.metadataPubKey = try tkey.get_key_details().pub_key.getPublicKey(format: .EllipticCompress)
-        
+        deviceMetadataShareIndex = shareIndexes[0]
+
+        metadataPubKey = try tkey.get_key_details().pub_key.getPublicKey(format: .EllipticCompress)
+
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
         let (tssIndexStr, tssShare) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selectedTag, factorKey: factorKey)
-        
+
         self.tssIndex = tssIndexStr
         self.tssShare = tssShare
-        
+
         // save as device factor if hashfactor is disable
         if option.disableHashFactor == true {
             try await setDeviceFactor(factorKey: factorKey)
@@ -333,43 +328,42 @@ public class MpcCoreKit {
     }
 
     public func logout() async throws {
-        // TODO how to clear all state
-        self.factorKey = nil
-        self.authSigs = nil
-        self.sigs = nil
-        
-        self.tkey = nil
-        self.metadataHostUrl = nil
-        self.nodeDetails = nil
-        self.nodeIndexes = nil
-        
-        self.verifier = nil
-        self.verifierId = nil
-        self.userInfo = nil
-        
-        self.oAuthKey = nil
-        self.metadataPubKey = nil
-        self.deviceMetadataShareIndex = nil
-        
+        // TODO: how to clear all state
+        factorKey = nil
+        authSigs = nil
+        sigs = nil
+
+        tkey = nil
+        metadataHostUrl = nil
+        nodeDetails = nil
+        nodeIndexes = nil
+
+        verifier = nil
+        verifierId = nil
+        userInfo = nil
+
+        oAuthKey = nil
+        metadataPubKey = nil
+        deviceMetadataShareIndex = nil
     }
 
     public func inputFactor(factorKey: String) async throws {
         guard let threshold_key = tkey else {
             throw CoreKitError.invalidTKey
         }
-        
-        let allFactorPubs = try await self.getAllFactorPubs()
+
+        let allFactorPubs = try await getAllFactorPubs()
         let factorPub = try SecretKey(hex: factorKey).toPublic().serialize(compressed: true)
-        if (!allFactorPubs.contains(factorPub)) {
+        if !allFactorPubs.contains(factorPub) {
             throw CoreKitError.invalidFactorKey
         }
-        
+
         // input factor
         try await threshold_key.input_factor_key(factorKey: factorKey)
 
         // try using better methods ?
-        self.deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: threshold_key, factor_key: factorKey)
-        
+        deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: threshold_key, factor_key: factorKey)
+
         // setup tkey ( assuming only 2 factor is required)
         let _ = try await threshold_key.reconstruct()
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
@@ -398,7 +392,7 @@ public class MpcCoreKit {
 
     // To remove reset account function
     public func resetAccount() async throws {
-        guard let postboxkey = self.oAuthKey else {
+        guard let postboxkey = oAuthKey else {
             throw CoreKitError.notLoggedIn
         }
 
@@ -418,58 +412,54 @@ public class MpcCoreKit {
     }
 }
 
-
 // Device Factor Manipulation
 extension MpcCoreKit {
     public func getDeviceFactor() async throws -> String {
         // getMetadataPublicKey compressed
-        guard let metadataPubKey = self.metadataPubKey else {
+        guard let metadataPubKey = metadataPubKey else {
             throw CoreKitError.metadataPubKeyUnavailable
         }
-        
+
         let deviceFactorStorage = DeviceFactorStorage(storage: coreKitStorage)
         return try await deviceFactorStorage.getFactor(metadataPubKey: metadataPubKey)
     }
-    
+
     public func setDeviceFactor(factorKey: String) async throws {
-        guard let metadataPubKey = self.metadataPubKey else {
+        guard let metadataPubKey = metadataPubKey else {
             throw CoreKitError.metadataPubKeyUnavailable
         }
         let deviceFactorStorage = DeviceFactorStorage(storage: coreKitStorage)
         try await deviceFactorStorage.setFactor(metadataPubKey: metadataPubKey, factorKey: factorKey)
     }
-    
+
     internal func resetDeviceFactorStore() async throws {
-        guard let metadataPubKey = self.metadataPubKey else {
+        guard let metadataPubKey = metadataPubKey else {
             throw CoreKitError.metadataPubKeyUnavailable
         }
         try await coreKitStorage.set(key: metadataPubKey, payload: Data())
     }
-    
 }
-
-
 
 extension MpcCoreKit {
     private func getMetadataShare() async throws -> ShareStore {
         let stores = try tkey!.get_all_share_stores_for_latest_polynomial()
-        var share: ShareStore? = nil
+        var share: ShareStore?
         let length = try stores.length()
-        for i in 0..<length {
+        for i in 0 ..< length {
             let store = try stores.getAt(index: i)
             let index = try store.share_index()
             if !index.elementsEqual("1") {
                 share = store
             }
         }
-        
+
         if share == nil {
             throw CoreKitError.notFound(msg: "No metadata share was found.")
         }
-        
+
         return share!
     }
-    
+
     private func deleteMetadataShareBackup(factorKey: String) async throws {
         var input: [String: Any] = [:]
         input.updateValue("SHARE_DELETED", forKey: "message")
@@ -479,26 +469,26 @@ extension MpcCoreKit {
 
         let payload = try JSONSerialization.data(withJSONObject: inputs)
         try tkey!.add_local_metadata_transitions(input_json: String(data: payload, encoding: .utf8)!, private_key: factorKey)
-        if (!option.manualSync) {
+        if !option.manualSync {
             try await tkey!.sync_local_metadata_transistions()
         }
     }
-    
+
     private func backupMetadataShare(factorKey: String) async throws {
         let metadataShare = try await getMetadataShare()
-        
+
         try tkey!.add_local_metadata_transitions(input_json: metadataShare.toJsonString(), private_key: factorKey)
     }
-    
-    private func addFactorDescription (
+
+    private func addFactorDescription(
         factorKey: String,
         shareDescription: FactorType,
-        additionalMetadata: [String:String],
+        additionalMetadata: [String: String],
         updateMetadata: Bool = true
-    ) async throws  {
-        let tssIndex = try await TssModule.get_tss_share(threshold_key: self.tkey!, tss_tag: "default", factorKey: factorKey)
+    ) async throws {
+        let tssIndex = try await TssModule.get_tss_share(threshold_key: tkey!, tss_tag: "default", factorKey: factorKey)
         let factorPub = try SecretKey(hex: factorKey).toPublic().serialize(compressed: false)
-        
+
         var input: [String: Any] = [:]
         input.updateValue(shareDescription, forKey: "module")
         input.updateValue(Int(Date().timeIntervalSince1970), forKey: "dataAdded")
@@ -508,14 +498,14 @@ extension MpcCoreKit {
         }
 
         let payload = try JSONSerialization.data(withJSONObject: input)
-        
+
         try await tkey!.add_share_description(key: factorPub, description: String(data: payload, encoding: .utf8)!, update_metadata: updateMetadata)
     }
-    
+
     private func getOAuthKey(result: TorusKey) -> String {
         return TorusUtils.getPostboxKey(torusKey: result)
     }
-    
+
     private func getSignatures(sessionData: TorusKey.SessionData) -> [[String: String]] {
         let signatures = sessionData.sessionTokenData.map { token in
             ["data": token!.token,
@@ -523,30 +513,30 @@ extension MpcCoreKit {
         }
         return signatures
     }
-    
+
     private func getSigningSignatures() throws -> [String] {
-        guard let sigs = self.authSigs else {
+        guard let sigs = authSigs else {
             throw CoreKitError.invalidAuthSignatures
         }
         return sigs
     }
-    
+
     internal class AccessRequestParams: Codable {
         public var network: String
         public var client_id: String
         public var is_mpc_core_kit: String = "true"
         public var enable_gating: String = "true"
-        
+
         public init(network: String, client_id: String) {
             self.network = network
             self.client_id = client_id
         }
     }
-    
+
     private func featureRequest() async throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
-        
+
         let accessUrl = option.web3AuthNetwork.signerMap
         var request = try Utilities.makeUrlRequest(url: "\(accessUrl)/api/feature-access")
         let params = AccessRequestParams(network: option.web3AuthNetwork.name, client_id: option.web3AuthClientId)
@@ -555,12 +545,11 @@ extension MpcCoreKit {
         let (val, _) = try await urlSession.data(for: request)
         return String(data: val, encoding: .utf8)!
     }
-    
+
     private func getNonce() async throws {
         // requires tkey-mpc extension
-        return;
     }
-    
+
     private func logDecorator<T, U>(function: @escaping (T) -> U) -> (T) -> U {
         return { arg in
             print("Function called with argument: \(arg)")

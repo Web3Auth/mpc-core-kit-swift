@@ -19,7 +19,7 @@ public class FactorDescription: Codable {
     public let tssIndex: TssShareType
     public let description: String?
     public let dateAdded: Int
-    
+
     public init(module: FactorType, tssIndex: TssShareType, description: String?, dateAdded: Int) {
         self.module = module
         self.tssIndex = tssIndex

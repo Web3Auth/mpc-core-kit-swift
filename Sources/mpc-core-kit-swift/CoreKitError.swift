@@ -26,7 +26,7 @@ public enum CoreKitError: Error {
     case invalidMetadataPubKey
     case currentFactorNotHashFactor
     case requireUncompressedPublicKey
-    case invalidStore 
+    case invalidStore
     case noTssTags
     case invalidDeviceFactorKey
     case invalidTssPubKey
@@ -90,7 +90,7 @@ public enum CoreKitError: Error {
             return "No Tss tags have been set"
         case .invalidDeviceFactorKey:
             return "Device factor key not found"
-        case .runtime(msg: let msg):
+        case let .runtime(msg: msg):
             return msg
         case .invalidTssPubKey:
             return "Invalid tss public key"

@@ -15,4 +15,3 @@ internal class MemoryStorage: ILocalStorage {
         memory.updateValue(payload, forKey: key)
     }
 }
-

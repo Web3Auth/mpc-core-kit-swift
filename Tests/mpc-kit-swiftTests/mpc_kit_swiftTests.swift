@@ -1,6 +1,6 @@
 import curveSecp256k1
-import JWTKit
 import FetchNodeDetails
+import JWTKit
 import mpc_core_kit_swift
 import XCTest
 
@@ -105,9 +105,9 @@ final class mpc_kit_swiftTests: XCTestCase {
         let email = "testWebCompabilityAccount@DoNotReset"
         let verifier = "torus-test-health"
         let clientId = "torus-key-test"
-        
+
         let memoryStorage = MemoryStorage()
-        
+
         let coreKitInstance = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: true, web3AuthNetwork: .SAPPHIRE_DEVNET, localStorage: memoryStorage, disableHashFactor: false))
 
         let data = try mockLogin2(email: email)
@@ -116,12 +116,11 @@ final class mpc_kit_swiftTests: XCTestCase {
         let _ = try await coreKitInstance.loginWithJwt(verifier: verifier, verifierId: email, idToken: token)
         let hash = try keccak256(data: Data(hexString: "010203040506")!)
         _ = try coreKitInstance.tssSign(message: hash)
-        
+
         let newFactor = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: ["my": "mymy"])
 
         let deleteFactorPub = try curveSecp256k1.SecretKey(hex: newFactor).toPublic().serialize(compressed: true)
         try await coreKitInstance.deleteFactor(deleteFactorPub: deleteFactorPub, deleteFactorKey: newFactor)
-         
     }
 
     func testMFARecoveryFactor() async throws {
@@ -136,7 +135,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         let token = data
 
         let _ = try await coreKitInstance.loginWithJwt(verifier: verifier, verifierId: email, idToken: token)
-                
+
         let recoveryFactor = try await coreKitInstance.enableMFAWithRecoveryFactor()
 
         let memoryStorage2 = MemoryStorage()
@@ -145,7 +144,6 @@ final class mpc_kit_swiftTests: XCTestCase {
         let token2 = data2
 
         let keyDetails2 = try await coreKitInstance2.loginWithJwt(verifier: verifier, verifierId: email, idToken: token2)
-        
 
         XCTAssertEqual(keyDetails2.requiredFactors, 1)
 
