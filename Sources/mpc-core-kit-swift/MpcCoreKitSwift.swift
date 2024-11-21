@@ -2,6 +2,7 @@ import CustomAuth
 import FetchNodeDetails
 import Foundation
 import TorusUtils
+import JWTDecode
 
 #if canImport(tkey)
     import tkey
@@ -19,9 +20,9 @@ public class MpcCoreKit {
     
     internal var tssPubKey: String?
     
-    internal var userInfo: [String:Any]
+    internal var userInfo: UserInfo?
     internal var option: CoreKitWeb3AuthOptions
-//    internal var state: CoreKitstate
+    //internal var state: CoreKitstate
     
     
     public var metadataPubKey: String? = nil
@@ -62,7 +63,7 @@ public class MpcCoreKit {
 
         let config = CustomAuthArgs(urlScheme: "tdsdk://tdsdk/oauthCallback", network: option.web3AuthNetwork, enableOneKey: true, web3AuthClientId: option.web3AuthClientId)
         self.customAuth = try CustomAuth(config: config)
-        self.userInfo = [:]
+        self.userInfo = nil
     }
 
     public func getCurrentFactorKey() throws -> String {
@@ -83,9 +84,7 @@ public class MpcCoreKit {
         let loginResponse = try await customAuth.triggerLogin(args: singleLoginParams)
 
         let result = try await login(keyDetails: loginResponse.torusKey, verifier: loginResponse.singleVerifierResponse.userInfo.verifier, verifierId: loginResponse.singleVerifierResponse.userInfo.verifierId)
-        let jsonData = try JSONEncoder().encode(loginResponse.singleVerifierResponse.userInfo)
-        
-        self.userInfo = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] ?? [:]
+        self.userInfo = loginResponse.singleVerifierResponse.userInfo
         
         return result
     }
@@ -94,8 +93,7 @@ public class MpcCoreKit {
         let loginResponse = try await customAuth.triggerAggregateLogin(args: aggregateLoginParams)
         let result = try await login(keyDetails: loginResponse.torusKey, verifier: loginResponse.torusAggregateVerifierResponse.first!.userInfo.verifier, verifierId: loginResponse.torusAggregateVerifierResponse.first!.userInfo.verifierId)
         
-        let jsonData = try JSONEncoder().encode(loginResponse.torusAggregateVerifierResponse.first?.userInfo)
-        self.userInfo = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] ?? [:]
+        self.userInfo = loginResponse.torusAggregateVerifierResponse.first?.userInfo
         
         return result
     }
@@ -113,18 +111,22 @@ public class MpcCoreKit {
     
     public func loginWithJwt(verifier: String, verifierId: String, idToken: String) async throws -> MpcKeyDetails {
     
+        let parsedToken = try decode(jwt: idToken)
+        let verifierIDToken = parsedToken.subject;
+
         let torusKey = try await customAuth.getTorusKey(verifier: verifier, verifier_id: verifierId, verifierParams: VerifierParams(verifier_id: verifierId), idToken: idToken)
         
         let result = try await login(keyDetails: torusKey, verifier: verifier, verifierId: verifierId)
         
-        self.userInfo["verifier"] = verifier
-        self.userInfo["verifierId"] = verifierId
-        self.userInfo["idToken"] = idToken
+        // TODO: Make constructor public in customauth for TorusGenericContainer
+        let encodedEmptyState = "7b22706172616d73223a7b7d7d"
+        let state = try! JSONDecoder().decode(TorusGenericContainer.self, from: Data(hexString: encodedEmptyState)!)
+        self.userInfo = UserInfo(email: parsedToken.body["email"] as? String ?? "", name: parsedToken.body["name"] as? String ?? "", profileImage: parsedToken.body["picture"] as? String ?? "", aggregateVerifier: nil, verifier: verifier, verifierId: verifierId, typeOfLogin: .jwt, idToken: idToken, state: state)
         
         return result
     }
 
-    public func getUserInfo() throws -> [String: Any] {
+    public func getUserInfo() -> UserInfo? {
         return userInfo
     }
 
@@ -344,7 +346,7 @@ public class MpcCoreKit {
         
         self.verifier = nil
         self.verifierId = nil
-        self.userInfo = [:]
+        self.userInfo = nil
         
         self.oAuthKey = nil
         self.metadataPubKey = nil

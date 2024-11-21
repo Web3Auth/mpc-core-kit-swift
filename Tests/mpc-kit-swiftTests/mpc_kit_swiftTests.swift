@@ -155,8 +155,8 @@ final class mpc_kit_swiftTests: XCTestCase {
         let getKeyDetails = try await coreKitInstance2.getKeyDetails()
         XCTAssertEqual(getKeyDetails.requiredFactors, 0)
 
-        let userInfo = try coreKitInstance2.getUserInfo()
-        let verifierId = userInfo["verifierId"] as? String
+        let userInfo = coreKitInstance2.getUserInfo()
+        let verifierId = userInfo?.verifierId as? String
         XCTAssertEqual(verifierId, email)
 
         let hash2 = try Data(hexString: "010203040506")!.sha3(varient: Variants.KECCAK256)
