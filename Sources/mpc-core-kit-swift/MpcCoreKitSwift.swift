@@ -260,7 +260,7 @@ public class MpcCoreKit {
             self.metadataPubKey = try thresholdKey.get_key_details().pub_key.getPublicKey(format: .EllipticCompress)
 
         } catch {
-            
+            // Note: TODO: Ignored error here.
         }
     }
 
