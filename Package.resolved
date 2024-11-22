@@ -86,8 +86,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tkey/tkey-mpc-swift",
       "state" : {
-        "branch" : "encapsulate_torusnetwork",
-        "revision" : "73158e73e109e59ec7e7a9f9fdd9c70759a04d7b"
+        "branch" : "4.0.0",
+        "revision" : "9c9b48b4751b18d5d4c6a813228685cf526a0071"
       }
     },
     {
