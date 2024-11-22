@@ -104,8 +104,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/torusresearch/tss-client-swift.git",
       "state" : {
-        "revision" : "4eadb32baed827d5e0600ee4f5c099259c45631c",
-        "version" : "5.0.0"
+        "revision" : "6f00e4e03184a77eea0330b5b8d092d1452b9eb4",
+        "version" : "5.0.1"
       }
     }
   ],
