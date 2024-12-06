@@ -1,7 +1,7 @@
 import Foundation
 import mpc_core_kit_swift
 
-internal class MemoryStorage: ILocalStorage {
+internal class MemoryStorage: IStorage {
     var memory: [String: Data] = [:]
 
     public func get(key: String) async throws -> Data {

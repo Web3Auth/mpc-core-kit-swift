@@ -1,10 +1,10 @@
 import Foundation
 
 public class CoreKitStorage {
-    public var storage: ILocalStorage
+    public var storage: IStorage
     private var storeKey: String
 
-    public init(storeKey: String, storage: ILocalStorage) {
+    public init(storeKey: String, storage: IStorage) {
         self.storage = storage
         self.storeKey = storeKey
     }

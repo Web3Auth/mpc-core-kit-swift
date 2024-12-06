@@ -57,7 +57,7 @@ public class MpcCoreKit {
         let torusOptions = TorusOptions(clientId: option.web3AuthClientId, network: option.web3AuthNetwork, enableOneKey: true)
         torusUtils = try TorusUtils(params: torusOptions)
 
-        coreKitStorage = CoreKitStorage(storeKey: storeKey, storage: option.localStorage)
+        coreKitStorage = CoreKitStorage(storeKey: storeKey, storage: option.storage)
 
         let config = CustomAuthArgs(urlScheme: "tdsdk://tdsdk/oauthCallback", network: option.web3AuthNetwork, enableOneKey: true, web3AuthClientId: option.web3AuthClientId)
         customAuth = try CustomAuth(config: config)
@@ -99,13 +99,13 @@ public class MpcCoreKit {
         return result
     }
 
-    public func mnemonicToKey(shareMnemonic: String, format: String) throws -> String {
-        let factorKey = try ShareSerializationModule.deserialize_share(threshold_key: tkey!, share: shareMnemonic, format: format)
+    public func mnemonicToKey(shareMnemonic: String) throws -> String {
+        let factorKey = try ShareSerializationModule.deserialize_share(threshold_key: tkey!, share: shareMnemonic, format: "mnemonic")
         return factorKey
     }
 
-    public func keyToMnemonic(factorKey: String, format: String) throws -> String {
-        let mnemonic = try ShareSerializationModule.serialize_share(threshold_key: tkey!, share: factorKey, format: format)
+    public func keyToMnemonic(factorKey: String) throws -> String {
+        let mnemonic = try ShareSerializationModule.serialize_share(threshold_key: tkey!, share: factorKey, format: "mnemonic")
         return mnemonic
     }
 
@@ -237,11 +237,12 @@ public class MpcCoreKit {
         do {
             // try check for hash factor
 
-            let hashFactor = try Utilities.getHashedPrivateKey(postboxKey: postboxKey!, clientID: option.web3AuthClientId)
+            let hashFactor = try Utilities.getHashedPrivateKey(postboxKey: postboxKey!, hashedFactorNonce: option.hashedFactorNonce)
+            
             let hashFactorPub = try SecretKey(hex: hashFactor).toPublic().serialize(compressed: true)
             let allFactorPub = try await getAllFactorPubs()
 
-            if option.disableHashFactor == false && allFactorPub.contains(hashFactorPub) {
+            if option.disableHashedFactorKey == false && allFactorPub.contains(hashFactorPub) {
                 try await inputFactor(factorKey: hashFactor)
                 factorKey = hashFactor
             } else {
@@ -283,9 +284,10 @@ public class MpcCoreKit {
         let factorKey: String
         let descriptionTypeModule: FactorType
 
-        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: postboxKey!, clientID: option.web3AuthClientId)
 
-        if option.disableHashFactor == false {
+        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: postboxKey!, hashedFactorNonce: option.hashedFactorNonce)
+
+        if option.disableHashedFactorKey == false {
             factorKey = hashFactorKey
             descriptionTypeModule = FactorType.HashedShare
 
@@ -325,7 +327,7 @@ public class MpcCoreKit {
         self.tssShare = tssShare
 
         // save as device factor if hashfactor is disable
-        if option.disableHashFactor == true {
+        if option.disableHashedFactorKey == true {
             try await setDeviceFactor(factorKey: factorKey)
         }
     }

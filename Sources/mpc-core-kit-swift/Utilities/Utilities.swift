@@ -29,12 +29,12 @@ class Utilities {
         return jwt
     }
 
-    public static func getHashedPrivateKey(postboxKey: String, clientID: String) throws -> String {
-        if postboxKey.isEmpty || clientID.isEmpty {
+    public static func getHashedPrivateKey(postboxKey: String, hashedFactorNonce: String) throws -> String {
+        if postboxKey.isEmpty || hashedFactorNonce.isEmpty {
             throw CoreKitError.invalidInput
         }
 
-        let uid = postboxKey + "_" + clientID
+        let uid = postboxKey + "_" + hashedFactorNonce
 
         let hashUID = try uid.data(using: .utf8)!.sha3(varient: .KECCAK256).hexString
 
