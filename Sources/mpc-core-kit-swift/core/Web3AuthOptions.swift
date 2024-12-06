@@ -11,7 +11,7 @@ public class CoreKitWeb3AuthOptions {
     public let localStorage: ILocalStorage
     public let overwriteMetadataUrl: String?
 
-    public init(web3AuthClientId: String, manualSync: Bool, web3AuthNetwork: Web3AuthNetwork, localStorage: ILocalStorage, storageKey: String? = "local", sessionTime: Int? = 86000, disableHashFactor: Bool = false, overwriteMetadataUrl: String? = nil) {
+    public init(web3AuthClientId: String, manualSync: Bool = false, web3AuthNetwork: Web3AuthNetwork = .SAPPHIRE_MAINNET, localStorage: ILocalStorage, storageKey: String? = "local", sessionTime: Int? = 86000, disableHashFactor: Bool = false, overwriteMetadataUrl: String? = nil) {
         self.web3AuthClientId = web3AuthClientId
         self.manualSync = manualSync
         self.web3AuthNetwork = web3AuthNetwork
