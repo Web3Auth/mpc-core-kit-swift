@@ -25,7 +25,7 @@ public class MpcCoreKit {
     // internal var state: CoreKitstate
 
     public var metadataPubKey: String?
-    public var oAuthKey: String?
+    public var postboxKey: String?
     // share index used for backup share recovery
     public var deviceMetadataShareIndex: String?
     public var loginTime: Date?
@@ -49,7 +49,7 @@ public class MpcCoreKit {
 
     public init(options: CoreKitWeb3AuthOptions) throws {
         if options.web3AuthClientId.isEmpty {
-            throw CoreKitError.invalidInput
+            throw CoreKitError.invalidClientId
         }
         option = options
 
@@ -64,11 +64,14 @@ public class MpcCoreKit {
         userInfo = nil
     }
 
-    public func getCurrentFactorKey() throws -> String {
+    public func getCurrentFactorKey() throws -> FactorKeyData {
         guard let factor = factorKey else {
             throw CoreKitError.factorKeyUnavailable
         }
-        return factor
+        guard let tssIndex = self.tssIndex else {
+            throw CoreKitError.factorKeyUnavailable
+        }
+        return FactorKeyData (factorKey: factor, tssIndex: tssIndex)
     }
 
     public func getDeviceMetadataShareIndex() throws -> String {
@@ -154,7 +157,7 @@ public class MpcCoreKit {
     // with factor key if new user
     // with required factor > 0 if existing user
     private func login(keyDetails: TorusKey, verifier: String, verifierId: String) async throws -> MpcKeyDetails {
-        oAuthKey = getOAuthKey(result: keyDetails)
+        postboxKey = getPostboxKey(result: keyDetails)
 
         self.verifier = verifier
         self.verifierId = verifierId
@@ -182,7 +185,7 @@ public class MpcCoreKit {
 
         tssEndpoints = nodeDetails.getTorusNodeTSSEndpoints()
 
-        guard let postboxkey = oAuthKey else {
+        guard let postboxkey = postboxKey else {
             throw CoreKitError.invalidPostboxKey
         }
 
@@ -234,7 +237,7 @@ public class MpcCoreKit {
         do {
             // try check for hash factor
 
-            let hashFactor = try Utilities.getHashedPrivateKey(postboxKey: oAuthKey!, clientID: option.web3AuthClientId)
+            let hashFactor = try Utilities.getHashedPrivateKey(postboxKey: postboxKey!, clientID: option.web3AuthClientId)
             let hashFactorPub = try SecretKey(hex: hashFactor).toPublic().serialize(compressed: true)
             let allFactorPub = try await getAllFactorPubs()
 
@@ -276,11 +279,11 @@ public class MpcCoreKit {
         shareIndexes.removeAll(where: { $0 == "1" })
 
         // TSS Module Initialize - create default tag
-        // generate factor key or use oauthkey hash as factor
+        // generate factor key or use postboxkey hash as factor
         let factorKey: String
         let descriptionTypeModule: FactorType
 
-        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: oAuthKey!, clientID: option.web3AuthClientId)
+        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: postboxKey!, clientID: option.web3AuthClientId)
 
         if option.disableHashFactor == false {
             factorKey = hashFactorKey
@@ -342,9 +345,10 @@ public class MpcCoreKit {
         verifierId = nil
         userInfo = nil
 
-        oAuthKey = nil
+        postboxKey = nil
         metadataPubKey = nil
         deviceMetadataShareIndex = nil
+        
     }
 
     public func inputFactor(factorKey: String) async throws {
@@ -392,7 +396,7 @@ public class MpcCoreKit {
 
     // To remove reset account function
     public func resetAccount() async throws {
-        guard let postboxkey = oAuthKey else {
+        guard let postboxkey = postboxKey else {
             throw CoreKitError.notLoggedIn
         }
 
@@ -408,7 +412,6 @@ public class MpcCoreKit {
 
         // reset state
         try await resetDeviceFactorStore()
-        let _ = try await coreKitStorage.resetStore()
     }
 }
 
@@ -502,7 +505,7 @@ extension MpcCoreKit {
         try await tkey!.add_share_description(key: factorPub, description: String(data: payload, encoding: .utf8)!, update_metadata: updateMetadata)
     }
 
-    private func getOAuthKey(result: TorusKey) -> String {
+    private func getPostboxKey(result: TorusKey) -> String {
         return TorusUtils.getPostboxKey(torusKey: result)
     }
 

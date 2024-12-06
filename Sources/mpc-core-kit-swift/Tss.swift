@@ -174,8 +174,8 @@ extension MpcCoreKit {
             throw CoreKitError.invalidMetadataPubKey
         }
 
-        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: oAuthKey!, clientID: option.web3AuthClientId)
-        let currentFactor = try getCurrentFactorKey()
+        let hashFactorKey = try Utilities.getHashedPrivateKey(postboxKey: postboxKey!, clientID: option.web3AuthClientId)
+        let currentFactor = try getCurrentFactorKey().factorKey
 
         if currentFactor != hashFactorKey {
             throw CoreKitError.currentFactorNotHashFactor
