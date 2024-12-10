@@ -475,7 +475,7 @@ extension MpcCoreKit {
         let payload = try JSONSerialization.data(withJSONObject: inputs)
         try tkey!.add_local_metadata_transitions(input_json: String(data: payload, encoding: .utf8)!, private_key: factorKey)
         if !option.manualSync {
-            try await tkey!.sync_local_metadata_transistions()
+            try await commitChanges()
         }
     }
 
