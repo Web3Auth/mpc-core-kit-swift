@@ -85,16 +85,22 @@ public class MpcCoreKit {
         let loginResponse = try await customAuth.triggerLogin(args: singleLoginParams)
 
         let result = try await login(keyDetails: loginResponse.torusKey, verifier: loginResponse.singleVerifierResponse.userInfo.verifier, verifierId: loginResponse.singleVerifierResponse.userInfo.verifierId)
-        userInfo = loginResponse.singleVerifierResponse.userInfo
+        self.userInfo = loginResponse.singleVerifierResponse.userInfo
 
         return result
     }
 
     public func loginWithOAuth(aggregateLoginParams: AggregateLoginParams) async throws -> MpcKeyDetails {
         let loginResponse = try await customAuth.triggerAggregateLogin(args: aggregateLoginParams)
-        let result = try await login(keyDetails: loginResponse.torusKey, verifier: loginResponse.torusAggregateVerifierResponse.first!.userInfo.verifier, verifierId: loginResponse.torusAggregateVerifierResponse.first!.userInfo.verifierId)
-
-        userInfo = loginResponse.torusAggregateVerifierResponse.first?.userInfo
+        if ( loginResponse.torusAggregateVerifierResponse.isEmpty ) {
+            throw CoreKitError.notFound(msg: "aggregate login failed")
+        }
+        guard let localUserInfo = loginResponse.torusAggregateVerifierResponse.first?.userInfo else {
+            throw CoreKitError.notFound(msg: "aggregate login failed")
+        }
+        
+        let result = try await login(keyDetails: loginResponse.torusKey, verifier: localUserInfo.verifier, verifierId: localUserInfo.verifierId)
+        self.userInfo = localUserInfo
 
         return result
     }
@@ -116,13 +122,26 @@ public class MpcCoreKit {
 
         let result = try await login(keyDetails: torusKey, verifier: verifier, verifierId: verifierId)
 
-        // TODO: Make constructor public in customauth for TorusGenericContainer
-        let encodedEmptyState = "7b22706172616d73223a7b7d7d"
-        let state = try! JSONDecoder().decode(TorusGenericContainer.self, from: Data(hexString: encodedEmptyState)!)
+        let state = TorusGenericContainer(params: [:])
         userInfo = UserInfo(email: parsedToken.body["email"] as? String ?? "", name: parsedToken.body["name"] as? String ?? "", profileImage: parsedToken.body["picture"] as? String ?? "", aggregateVerifier: nil, verifier: verifier, verifierId: verifierId, typeOfLogin: .jwt, idToken: idToken, state: state)
 
         return result
     }
+    
+    public func loginWithJwt(verifier: String, verifierId: String, idToken: String, subVerifierInfoArray: [TorusSubVerifierInfo]) async throws -> MpcKeyDetails {
+        let parsedToken = try decode(jwt: idToken)
+        let aggregateParams: VerifierParams = VerifierParams(verifier_id: verifierId, extended_verifier_id: nil)
+        
+        let torusKey = try await customAuth.getAggregateTorusKey(verifier: verifier, verifierParams: aggregateParams, subVerifierInfoArray: subVerifierInfoArray)
+
+        let result = try await login(keyDetails: torusKey, verifier: verifier, verifierId: verifierId)
+
+        let state = TorusGenericContainer(params: [:])
+        userInfo = UserInfo(email: parsedToken.body["email"] as? String ?? "", name: parsedToken.body["name"] as? String ?? "", profileImage: parsedToken.body["picture"] as? String ?? "", aggregateVerifier: "", verifier: verifier, verifierId: verifierId, typeOfLogin: .jwt, idToken: idToken, state: state)
+
+        return result
+    }
+
 
     public func getUserInfo() -> UserInfo? {
         return userInfo

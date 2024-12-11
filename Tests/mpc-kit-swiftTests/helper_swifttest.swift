@@ -8,6 +8,7 @@ class helper_swiftTests: XCTestCase {
         let state = CoreKitstate(factorKey: nil, metadataPubKey: nil, deviceMetadataShareIndex: "", loginTime: nil)
         let jsonState = try JSONEncoder().encode(state)
         let decoded = try JSONDecoder().decode(CoreKitstate.self, from: Data(jsonState))
+        
         XCTAssertEqual(state, decoded)
     }
 }
