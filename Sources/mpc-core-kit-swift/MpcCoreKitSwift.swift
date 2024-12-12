@@ -15,7 +15,6 @@ import TorusUtils
 public class MpcCoreKit {
     internal var selectedTag: String?
     internal var factorKey: String?
-    internal var tssShare: String?
     internal var tssIndex: String?
 
     internal var tssPubKey: String?
@@ -343,7 +342,6 @@ public class MpcCoreKit {
         let (tssIndexStr, tssShare) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selectedTag, factorKey: factorKey)
 
         self.tssIndex = tssIndexStr
-        self.tssShare = tssShare
 
         // save as device factor if hashfactor is disable
         if option.disableHashedFactorKey == true {
@@ -394,7 +392,6 @@ public class MpcCoreKit {
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
         let (tssIndex, tssShare) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey)
         self.factorKey = factorKey
-        self.tssShare = tssShare
         self.tssIndex = tssIndex
     }
 
