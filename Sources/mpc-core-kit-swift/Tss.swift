@@ -30,7 +30,7 @@ extension MpcCoreKit {
     }
 
     /// Signing Data without hashing
-    public func tssSign(message: Data) async throws -> Data {
+    public func tssSign(message: Data) throws -> Data {
         guard let authSigs = authSigs else {
             throw CoreKitError.invalidAuthSignatures
         }
@@ -46,7 +46,7 @@ extension MpcCoreKit {
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
         // Create tss Client using helper
 
-        let (client, coeffs) = try await bootstrapTssClient(selected_tag: selectedTag)
+        let (client, coeffs) = try bootstrapTssClient(selected_tag: selectedTag)
 
         // Wait for sockets to be connected
         let connected = try client.checkConnected()
@@ -202,7 +202,7 @@ extension MpcCoreKit {
         return recovery
     }
 
-    private func bootstrapTssClient(selected_tag: String) async throws -> (TSSClient, [String: String]) {
+    private func bootstrapTssClient(selected_tag: String) throws -> (TSSClient, [String: String]) {
         guard let tkey = tkey else {
             throw CoreKitError.invalidTKey
         }
@@ -213,9 +213,16 @@ extension MpcCoreKit {
             
         }
         
+        var tssShare: String = ""
+        let semaphore = DispatchSemaphore(value: 0)
+        Task {
+            let (_, localtssShare) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selected_tag, factorKey: factorKey)
+            tssShare = localtssShare
+            semaphore.signal()
+        }
+        semaphore.wait()
         
-        let (_, tssShare) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selected_tag, factorKey: factorKey)
-
+        
         let tssNonce = try TssModule.get_tss_nonce(threshold_key: tkey, tss_tag: selected_tag)
 
         let publicKey = try curveSecp256k1.PublicKey(hex: tssPubKey).serialize(compressed: false)

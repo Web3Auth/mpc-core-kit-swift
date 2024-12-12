@@ -147,26 +147,34 @@ public class MpcCoreKit {
     }
 
     public func getKeyDetails() async throws -> MpcKeyDetails {
-        if tkey == nil {
+        guard let tkey = self.tkey else {
             throw CoreKitError.notInitialized
         }
 
-        guard let finalKeyDetails = try tkey?.get_key_details() else {
-            throw CoreKitError.keyDetailsNotFound
-        }
-        let tssTag = try TssModule.get_tss_tag(threshold_key: tkey!)
-        let tssPubKey = try await TssModule.get_tss_pub_key(threshold_key: tkey!, tss_tag: tssTag)
+        let finalKeyDetails = try tkey.get_key_details()
+        
+        try await TssModule.set_tss_tag(threshold_key: tkey, tss_tag: "default")
+        
+        let tssTag = try TssModule.get_tss_tag(threshold_key: tkey)
+        
+        
+        print(try TssModule.get_all_tss_tags(threshold_key: tkey))
+        let tssPubKey = try? await TssModule.get_tss_pub_key(threshold_key: tkey, tss_tag: tssTag)
+        
+        print(try TssModule.get_all_tss_tags(threshold_key: tkey))
+
+        
         self.tssPubKey = tssPubKey
 
-        let factorsCount = try await getAllFactorPubs().count
+        let factorsCount = try? await getAllFactorPubs().count
         let keyDetails = MpcKeyDetails(
-            tssPubKey: tssPubKey,
+            tssPubKey: tssPubKey ?? "",
             metadataPubKey: try finalKeyDetails.pub_key.getPublicKey(format: PublicKeyEncoding.FullAddress),
             requiredFactors: factorKey == nil ? 1 : 0, // assuming we 2/n
             threshold: finalKeyDetails.threshold,
             shareDescriptions: finalKeyDetails.share_descriptions,
             totalShares: finalKeyDetails.total_shares,
-            totalFactors: UInt32(factorsCount) + 1
+            totalFactors: UInt32(factorsCount ?? 0 ) + 1
         )
         return keyDetails
     }
