@@ -3,7 +3,12 @@ import CustomAuth
 import Foundation
 import TorusUtils
 import tssClientSwift
+
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 #if canImport(tkey)
     import tkey
@@ -180,11 +185,18 @@ extension MpcCoreKit {
         if currentFactor != hashFactorKey {
             throw CoreKitError.currentFactorNotHashFactor
         }
-
+        #if canImport(UIKit)
         let additionalDeviceMetadata = await [
             "device": UIDevice.current.model,
             "name": UIDevice.current.name,
         ]
+        #elseif canImport(AppKit)
+        let additionalDeviceMetadata = [
+            "device": "Mac",
+            "name": ProcessInfo.processInfo.hostName,
+        ]
+        #endif
+        
         let deviceFactor = try await createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: additionalDeviceMetadata)
 
         // store to device
