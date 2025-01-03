@@ -347,7 +347,7 @@ public class MpcCoreKit {
         metadataPubKey = try tkey.get_key_details().pub_key.getPublicKey(format: .EllipticCompress)
 
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
-        let (tssIndexStr, tssShare) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selectedTag, factorKey: factorKey)
+        let (tssIndexStr, _) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selectedTag, factorKey: factorKey)
 
         self.tssIndex = tssIndexStr
 
@@ -398,7 +398,7 @@ public class MpcCoreKit {
         // setup tkey ( assuming only 2 factor is required)
         let _ = try await threshold_key.reconstruct()
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        let (tssIndex, tssShare) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey)
+        let (tssIndex, _) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey)
         self.factorKey = factorKey
         self.tssIndex = tssIndex
     }
