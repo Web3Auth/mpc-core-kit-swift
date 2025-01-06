@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/torusresearch/tss-client-swift.git", from: "5.0.1"),
-        .package(url: "https://github.com/tkey/tkey-mpc-swift", branch: "bulk_stream_multipart"),
+        .package(url: "https://github.com/tkey/tkey-mpc-swift", from: "4.0.1"),
         .package(url: "https://github.com/torusresearch/customauth-swift-sdk", from: "11.0.2"),
         .package(url: "https://github.com/vapor/jwt-kit.git", from: "4.0.0")
     ],
