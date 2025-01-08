@@ -74,16 +74,23 @@ extension MpcCoreKit {
     }
     
     
-    public func tssSignSync(message: Data) throws -> Data {
-        let semaphore = DispatchSemaphore(value: 0)
-        var signature: Data?;
+    private func tssSignCompletion( message: Data,  completion: @escaping (Data) -> Void) {
         Task {
             let localSignature = try await self.tssSign(message: message)
-            signature = localSignature
+            completion(localSignature)
+        }
+    }
+    
+    public func tssSignSync(message: Data) throws -> Data {
+        var signature: Data?;
+
+        let semaphore = DispatchSemaphore(value: 0)
+        tssSignCompletion(message: message){ result in
+            signature = result
             semaphore.signal()
         }
         semaphore.wait()
-        
+
         return signature ?? Data()
     }
 
