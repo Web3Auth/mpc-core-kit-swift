@@ -72,6 +72,20 @@ extension MpcCoreKit {
 
         return r.magnitude.serialize() + s.magnitude.serialize() + Data([v])
     }
+    
+    
+    public func tssSignSync(message: Data) throws -> Data {
+        let semaphore = DispatchSemaphore(value: 0)
+        var signature = Data()
+        Task {
+            let  localSignature = try await self.tssSign(message: message)
+            signature = localSignature
+            semaphore.signal()
+        }
+        semaphore.wait()
+        
+        return signature
+    }
 
     public func getAllFactorPubs() async throws -> [String] {
         guard let threshold_key = tkey else {
