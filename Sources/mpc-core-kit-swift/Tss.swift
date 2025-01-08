@@ -76,15 +76,15 @@ extension MpcCoreKit {
     
     public func tssSignSync(message: Data) throws -> Data {
         let semaphore = DispatchSemaphore(value: 0)
-        var signature = Data()
+        var signature: Data?;
         Task {
-            let  localSignature = try await self.tssSign(message: message)
+            let localSignature = try await self.tssSign(message: message)
             signature = localSignature
             semaphore.signal()
         }
         semaphore.wait()
         
-        return signature
+        return signature ?? Data()
     }
 
     public func getAllFactorPubs() async throws -> [String] {
