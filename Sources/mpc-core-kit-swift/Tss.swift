@@ -74,24 +74,34 @@ extension MpcCoreKit {
     }
     
     
-    private func tssSignCompletion( message: Data,  completion: @escaping (Data) -> Void) {
+    private func tssSignCompletion( message: Data,  completion: @escaping (_ tssResult:Data? , _ tssError:Error?) -> Void) {
         Task {
-            let localSignature = try await self.tssSign(message: message)
-            completion(localSignature)
+            do {
+                let localSignature = try await self.tssSign(message: message)
+                completion(localSignature, nil)
+            } catch {
+                completion(nil , error)
+            }
         }
     }
     
     public func tssSignSync(message: Data) throws -> Data {
         var signature: Data?;
+        var error: Error?
 
         let semaphore = DispatchSemaphore(value: 0)
-        tssSignCompletion(message: message){ result in
-            signature = result
+        tssSignCompletion(message: message){ tssReult , tssError in
+            signature = tssReult
+            error = tssError
             semaphore.signal()
         }
         semaphore.wait()
 
-        return signature ?? Data()
+        if let unwrapSignature = signature {
+            return unwrapSignature
+        }
+
+        throw error ?? CoreKitError.invalidResult
     }
 
     public func getAllFactorPubs() async throws -> [String] {
