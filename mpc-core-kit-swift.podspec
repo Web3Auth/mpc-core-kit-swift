@@ -9,7 +9,7 @@ Pod::Spec.new do |spec|
   spec.author       = { "Torus Labs" => "hello@tor.us" }
   spec.module_name = "tkey"
   spec.source       = { :git => "https://github.com/Web3Auth/mpc-core-kit", :tag => spec.version }
-  spec.dependency 'tkey-mpc-swift', '~> 4.0.0'
+  spec.dependency 'tkey-mpc-swift', '~> 4.0.2'
   spec.dependency 'tss-client-swift', '~> 5.0.1'
   spec.dependency 'CustomAuth', '~> 11.0.1'
 end
