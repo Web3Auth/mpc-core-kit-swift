@@ -36,7 +36,7 @@ extension MpcCoreKit {
 
     /// Signing Data without hashing
     public func tssSign(message: Data) async throws -> Data {
-        guard let authSigs = authSigs else {
+        guard let signatures = signatures else {
             throw CoreKitError.invalidAuthSignatures
         }
 
@@ -59,16 +59,16 @@ extension MpcCoreKit {
             throw TSSClientError("Client not connected")
         }
 
-        let precompute = try client.precompute(serverCoeffs: coeffs, signatures: authSigs)
+        let precompute = try client.precompute(serverCoeffs: coeffs, signatures: signatures)
         let ready = try client.isReady()
         if !ready {
             throw TSSClientError("Error, client not ready")
         }
 
         let signingMessage = message.base64EncodedString()
-        let (s, r, v) = try! client.sign(message: signingMessage, hashOnly: true, original_message: "", precompute: precompute, signatures: authSigs)
+        let (s, r, v) = try! client.sign(message: signingMessage, hashOnly: true, original_message: "", precompute: precompute, signatures: signatures)
 
-        try! client.cleanup(signatures: authSigs)
+        try! client.cleanup(signatures: signatures)
 
         return r.magnitude.serialize() + s.magnitude.serialize() + Data([v])
     }
@@ -154,7 +154,7 @@ extension MpcCoreKit {
     }
 
     public func deleteFactor(deleteFactorPub: String, deleteFactorKey: String? = nil) async throws {
-        guard let thresholdKey = tkey, let factorKey = factorKey, let sigs = authSigs else {
+        guard let thresholdKey = tkey, let factorKey = factorKey, let sigs = signatures else {
             throw CoreKitError.invalidTKey
         }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: thresholdKey)
@@ -189,7 +189,7 @@ extension MpcCoreKit {
     }
 
     private func addNewFactor(newFactorKey: String, tssShareIndex: TssShareType) async throws {
-        guard let threshold_key = tkey, let factorKey = factorKey, let sigs = authSigs else {
+        guard let threshold_key = tkey, let factorKey = factorKey, let sigs = signatures else {
             throw CoreKitError.invalidTKey
         }
 
@@ -232,7 +232,7 @@ extension MpcCoreKit {
 
         // store to device
         try await setDeviceFactor(factorKey: deviceFactor)
-        try await inputFactor(factorKey: deviceFactor)
+        try await inputFactorKey(factorKey: deviceFactor)
 
         // delete hash factor key
         let hashFactorPub = try curveSecp256k1.SecretKey(hex: hashFactorKey).toPublic().serialize(compressed: true)

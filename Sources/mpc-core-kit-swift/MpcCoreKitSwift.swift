@@ -32,14 +32,13 @@ public class MpcCoreKit {
     public var metadataHostUrl: String?
     public var tkey: ThresholdKey?
     public var tssEndpoints: [String]?
-    public var authSigs: [String]?
     public var verifier: String?
     public var verifierId: String?
     public var torusUtils: TorusUtils
     public var nodeIndexes: [Int]?
     public var nodeDetails: AllNodeDetailsModel?
     public var nodeDetailsManager: NodeDetailManager
-    public var sigs: [String]?
+    public var signatures: [String]?
 
     public var coreKitStorage: CoreKitStorage
     private let storeKey = "corekitStore"
@@ -224,7 +223,7 @@ public class MpcCoreKit {
 
         let sigs: [String] = try signatures.map { String(decoding: try JSONSerialization.data(withJSONObject: $0), as: UTF8.self) }
 
-        authSigs = sigs
+        self.signatures = sigs
 
         guard let metadataEndpoint = metadataHostUrl else {
             throw CoreKitError.invalidInput
@@ -269,13 +268,13 @@ public class MpcCoreKit {
             let allFactorPub = try await getAllFactorPubs()
 
             if option.disableHashedFactorKey == false && allFactorPub.contains(hashFactorPub) {
-                try await inputFactor(factorKey: hashFactor)
+                try await inputFactorKey(factorKey: hashFactor)
                 factorKey = hashFactor
             } else {
                 let deviceFactor = try await getDeviceFactor()
                 let deviceFactorPub = try SecretKey(hex: deviceFactor).toPublic().serialize(compressed: true)
                 if allFactorPub.contains(deviceFactorPub) {
-                    try await inputFactor(factorKey: deviceFactor)
+                    try await inputFactorKey(factorKey: deviceFactor)
                     factorKey = deviceFactor
                 } else {
                     throw CoreKitError.invalidDeviceFactorKey
@@ -360,8 +359,7 @@ public class MpcCoreKit {
     public func logout() async throws {
         // TODO: how to clear all state
         factorKey = nil
-        authSigs = nil
-        sigs = nil
+        signatures = nil
 
         tkey = nil
         metadataHostUrl = nil
@@ -378,7 +376,7 @@ public class MpcCoreKit {
         
     }
 
-    public func inputFactor(factorKey: String) async throws {
+    public func inputFactorKey(factorKey: String) async throws {
         guard let threshold_key = tkey else {
             throw CoreKitError.invalidTKey
         }
@@ -403,7 +401,7 @@ public class MpcCoreKit {
         self.tssIndex = tssIndex
     }
 
-    public func publicKey() async throws -> String {
+    public func getPubKey() async throws -> String {
         guard let threshold_key = tkey else {
             throw CoreKitError.invalidTKey
         }
@@ -544,7 +542,7 @@ extension MpcCoreKit {
     }
 
     private func getSigningSignatures() throws -> [String] {
-        guard let sigs = authSigs else {
+        guard let sigs = signatures else {
             throw CoreKitError.invalidAuthSignatures
         }
         return sigs

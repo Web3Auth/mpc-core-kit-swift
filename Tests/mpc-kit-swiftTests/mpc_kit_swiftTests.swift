@@ -155,7 +155,7 @@ final class mpc_kit_swiftTests: XCTestCase {
 
         XCTAssertEqual(keyDetails2.requiredFactors, 1)
 
-        try await coreKitInstance2.inputFactor(factorKey: recoveryFactor)
+        try await coreKitInstance2.inputFactorKey(factorKey: recoveryFactor)
         _ = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare)
 
         let getKeyDetails = try await coreKitInstance2.getKeyDetails()
