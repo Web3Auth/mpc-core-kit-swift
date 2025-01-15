@@ -102,17 +102,6 @@ public class MpcCoreKit {
 
         return result
     }
-
-    public func mnemonicToKey(shareMnemonic: String) throws -> String {
-        let factorKey = try ShareSerializationModule.deserialize_share(threshold_key: tkey!, share: shareMnemonic, format: "mnemonic")
-        return factorKey
-    }
-
-    public func keyToMnemonic(factorKey: String) throws -> String {
-        let mnemonic = try ShareSerializationModule.serialize_share(threshold_key: tkey!, share: factorKey, format: "mnemonic")
-        return mnemonic
-    }
-
     public func loginWithJwt(verifier: String, verifierId: String, idToken: String) async throws -> MpcKeyDetails {
         let parsedToken = try decode(jwt: idToken)
 
