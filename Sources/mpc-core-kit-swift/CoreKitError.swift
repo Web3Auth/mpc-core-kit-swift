@@ -5,6 +5,7 @@ public enum CoreKitError: Error {
     case invalidInput
     case notFound(msg: String)
     case factorKeyUnavailable
+    case tssIndexUnavailable
     case metadataPubKeyUnavailable
     case shareIndexNotFound
     case notLoggedIn
@@ -18,7 +19,6 @@ public enum CoreKitError: Error {
     case invalidTKey
     case nodeDetailsMissing
     case invalidMetadataUrl
-    case invalidOAuthKey
     case invalidHashKey
     case invalidAuthSignatures
     case invalidFactorKey
@@ -28,6 +28,10 @@ public enum CoreKitError: Error {
     case requireUncompressedPublicKey
     case invalidStore
     case noTssTags
+    case invalidDeviceFactorKey
+    case invalidTssPubKey
+    case invalidClientId
+    case runtime(_ msg: String)
 
     public var errorDescription: String {
         switch self {
@@ -41,6 +45,8 @@ public enum CoreKitError: Error {
             return "Invalid input"
         case .factorKeyUnavailable:
             return "Factor key unavailable"
+        case .tssIndexUnavailable:
+            return "TSS index unavailable"
         case .shareIndexNotFound:
             return "Share index not found"
         case .notLoggedIn:
@@ -65,8 +71,6 @@ public enum CoreKitError: Error {
             return "Node details absent"
         case .invalidMetadataUrl:
             return "Invalid metadata url"
-        case .invalidOAuthKey:
-            return "Invalid OAuthKey"
         case .invalidHashKey:
             return "Invalid hash key"
         case .invalidAuthSignatures:
@@ -85,6 +89,14 @@ public enum CoreKitError: Error {
             return "Invalid Store"
         case .noTssTags:
             return "No Tss tags have been set"
+        case .invalidDeviceFactorKey:
+            return "Device factor key not found"
+        case let .runtime(msg: msg):
+            return msg
+        case .invalidTssPubKey:
+            return "Invalid tss public key"
+        case .invalidClientId:
+            return "Invalid client id"
         }
     }
 }

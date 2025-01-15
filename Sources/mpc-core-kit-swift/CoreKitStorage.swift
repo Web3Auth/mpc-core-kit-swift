@@ -1,10 +1,10 @@
 import Foundation
 
 public class CoreKitStorage {
-    public var storage: ILocalStorage
+    public var storage: IStorage
     private var storeKey: String
 
-    public init(storeKey: String, storage: ILocalStorage) {
+    public init(storeKey: String, storage: IStorage) {
         self.storage = storage
         self.storeKey = storeKey
     }
@@ -27,28 +27,28 @@ public class CoreKitStorage {
         return resultStr
     }
 
-    public func getStore() async throws -> [String: Any] {
+    public func getStore() async throws -> [String: String] {
         let result = try await storage.get(key: storeKey)
         if result.isEmpty { return [:] }
-        let store = try JSONSerialization.jsonObject(with: result) as? [String: Any]
+        let store = try JSONSerialization.jsonObject(with: result) as? [String: String]
         guard let storeUnwrapped = store else {
             throw CoreKitError.invalidStore
         }
         return storeUnwrapped
     }
 
-    public func get<T>(key: String) async throws -> T {
+    public func get(key: String) async throws -> Data {
         let store = try await getStore()
-        guard let item = store[key] as? T else {
+        guard let item = store[key] else {
             throw CoreKitError.notFound(msg: "key \(key) value  not found")
         }
-        return item
+        return Data(base64Encoded: item) ?? Data()
     }
 
-    public func set<T>(key: String, payload: T) async throws {
+    public func set(key: String, payload: Data) async throws {
         var store: [String: Any] = try await getStore()
-        store.updateValue(payload, forKey: key)
-        let jsonData = try JSONSerialization.data(withJSONObject: store)
+        store.updateValue(payload.base64EncodedString(), forKey: key)
+        let jsonData = try JSONSerialization.data(withJSONObject: store, options: [])
         try await storage.set(key: storeKey, payload: jsonData)
     }
 

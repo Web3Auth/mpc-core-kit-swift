@@ -1,13 +1,12 @@
 import Foundation
 import mpc_core_kit_swift
 
-internal class MemoryStorage: ILocalStorage {
+internal class MemoryStorage: IStorage {
     var memory: [String: Data] = [:]
 
     public func get(key: String) async throws -> Data {
         guard let result = memory[key] else {
-            throw CoreKitError.notFound(msg: "No value for " + key)
-            // return Data()
+            return Data()
         }
         return result
     }
@@ -16,4 +15,3 @@ internal class MemoryStorage: ILocalStorage {
         memory.updateValue(payload, forKey: key)
     }
 }
-
