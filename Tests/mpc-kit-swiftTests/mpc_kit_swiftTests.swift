@@ -101,7 +101,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         let token = data
 
         let _ = try await coreKitInstance.loginWithJwt(verifier: verifier, verifierId: email, idToken: token)
-        try await coreKitInstance.resetAccount()
+        try await resetAccount(coreKitInstance: coreKitInstance)
     }
 
     // this test is testing account from mpc web

@@ -39,3 +39,23 @@ func factorDescriptionToJsonStr(dataObj: FactorDescription) throws -> String {
     }
     return jsonStr
 }
+
+// To remove reset account function
+public func resetAccount(coreKitInstance: MpcCoreKit) async throws {
+    guard let postboxKey = coreKitInstance.postboxKey else {
+        throw CoreKitError.notLoggedIn
+    }
+
+    guard let _ = coreKitInstance.metadataHostUrl else {
+        throw CoreKitError.invalidMetadataUrl
+    }
+
+    guard let tkey = coreKitInstance.tkey else {
+        throw CoreKitError.invalidTKey
+    }
+    
+    try await tkey.storage_layer_set_metadata(private_key: postboxKey, json: "{ \"message\": \"KEY_NOT_FOUND\" }")
+
+    // reset state
+    try await coreKitInstance.resetDeviceFactorStore()
+}

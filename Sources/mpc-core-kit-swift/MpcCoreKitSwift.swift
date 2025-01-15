@@ -405,26 +405,6 @@ public class MpcCoreKit {
         }
         try await tkey.sync_local_metadata_transistions()
     }
-
-    // To remove reset account function
-    public func resetAccount() async throws {
-        guard let postboxkey = postboxKey else {
-            throw CoreKitError.notLoggedIn
-        }
-
-        guard let threshold_key = tkey else {
-            throw CoreKitError.invalidTKey
-        }
-
-        guard let _ = metadataHostUrl else {
-            throw CoreKitError.invalidMetadataUrl
-        }
-
-        try await threshold_key.storage_layer_set_metadata(private_key: postboxkey, json: "{ \"message\": \"KEY_NOT_FOUND\" }")
-
-        // reset state
-        try await resetDeviceFactorStore()
-    }
 }
 
 // Device Factor Manipulation
