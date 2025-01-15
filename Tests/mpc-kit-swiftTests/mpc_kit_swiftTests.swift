@@ -165,6 +165,15 @@ final class mpc_kit_swiftTests: XCTestCase {
 
         let hash2 = try Data(hexString: "010203040506")!.sha3(varient: Variants.KECCAK256)
         _ = try await coreKitInstance2.tssSign(message: hash2)
+        
+        
+        // test rss refresh
+        try await coreKitInstance2.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .Other)
+        try await coreKitInstance2.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .Other)
+        try await coreKitInstance2.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .Other)
+        try await coreKitInstance2.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .Other)
+        try await coreKitInstance2.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .Other)
+        try await coreKitInstance2.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .Other)
     }
     
     
