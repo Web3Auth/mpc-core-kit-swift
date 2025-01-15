@@ -13,15 +13,15 @@ import TorusUtils
 #endif
 
 public class MpcCoreKit {
+    
     internal var selectedTag: String?
     internal var factorKey: String?
     internal var tssIndex: String?
-
+    internal var tssEndpoints: [String]?
     internal var tssPubKey: String?
 
     internal var userInfo: UserInfo?
     internal var option: CoreKitWeb3AuthOptions
-    // internal var state: CoreKitstate
 
     public var metadataPubKey: String?
     public var postboxKey: String?
@@ -31,7 +31,6 @@ public class MpcCoreKit {
 
     public var metadataHostUrl: String?
     public var tkey: ThresholdKey?
-    public var tssEndpoints: [String]?
     public var verifier: String?
     public var verifierId: String?
     public var torusUtils: TorusUtils
@@ -40,7 +39,7 @@ public class MpcCoreKit {
     public var nodeDetailsManager: NodeDetailManager
     public var signatures: [String]?
 
-    public var coreKitStorage: CoreKitStorage
+    private var coreKitStorage: CoreKitStorage
     private let storeKey = "corekitStore"
     private let localstateKey = "localstate"
     private let customAuth: CustomAuth
