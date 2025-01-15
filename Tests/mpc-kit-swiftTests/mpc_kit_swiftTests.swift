@@ -188,16 +188,20 @@ final class mpc_kit_swiftTests: XCTestCase {
         
         let hash = try keccak256(data: Data(hexString: "010203040506")!)
         let syncSig = try coreKitInstance.tssSignSync(message: hash)
+        print(syncSig)
         let sig = try await coreKitInstance.tssSign(message: hash)
         let syncSig2 = try coreKitInstance.tssSignSync(message: hash)
         print(sig)
+        print(syncSig2)
         
         let factor = try await coreKitInstance.createFactor(tssShareIndex: .recovery, factorKey: nil, factorDescription: .Other)
         print(factor)
         
         let syncSig3 = try coreKitInstance.tssSignSync(message: hash)
+        print(syncSig3)
         let sig2 = try await coreKitInstance.tssSign(message: hash)
         let syncSig4 = try coreKitInstance.tssSignSync(message: hash)
         print(sig2)
+        print(syncSig4)
     }
 }
