@@ -4,7 +4,7 @@ import Foundation
     import tkey
 #endif
 
-class FactorSerialization {
+public class FactorSerialization {
     public static func mnemonicToKey(tkey: ThresholdKey, shareMnemonic: String) throws -> String {
         return try ShareSerializationModule.deserialize_share(threshold_key: tkey, share: shareMnemonic)
     }
