@@ -105,5 +105,4 @@ public enum CoreKitStatus {
     case NotInitialized
     case RequireFactor
     case LoggedIn
-    case UnExpectedState
 }

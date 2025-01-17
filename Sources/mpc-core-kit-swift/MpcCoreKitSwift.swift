@@ -44,18 +44,20 @@ public class MpcCoreKit {
     private let localstateKey = "localstate"
     private let customAuth: CustomAuth
     
-    var status : CoreKitStatus {
-        get {
-            guard let requiredShares = try? self.tkey?.get_key_details().required_shares else {
-                return CoreKitStatus.NotInitialized
-            }
-            if requiredShares > 0 {
+    public func status() -> CoreKitStatus {
+        
+        guard let tkey = self.tkey else {
+            return CoreKitStatus.NotInitialized
+        }
+        
+        do {
+            if try tkey.get_key_details().required_shares > 0 {
                 return CoreKitStatus.RequireFactor
             }
-            if requiredShares == 0 {
-                return CoreKitStatus.LoggedIn
-            }
-            return CoreKitStatus.UnExpectedState
+            
+            return CoreKitStatus.LoggedIn
+        } catch {
+            return CoreKitStatus.NotInitialized
         }
     }
 
