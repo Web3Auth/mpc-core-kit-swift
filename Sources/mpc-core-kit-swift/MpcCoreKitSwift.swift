@@ -362,12 +362,17 @@ public class MpcCoreKit {
     public func logout() async throws {
         // TODO: how to clear all state
         factorKey = nil
+        tssIndex = nil
         signatures = nil
+        tssEndpoints = nil
+        tssPubKey = nil
 
         tkey = nil
         metadataHostUrl = nil
         nodeDetails = nil
         nodeIndexes = nil
+        
+        loginTime = nil
 
         verifier = nil
         verifierId = nil
