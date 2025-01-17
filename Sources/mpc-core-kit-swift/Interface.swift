@@ -100,3 +100,10 @@ public struct FactorKeyData : Codable {
     public var factorKey: String;
     public var tssIndex: String;
 }
+
+public enum CoreKitStatus {
+    case NotInitialized
+    case RequireFactor
+    case LoggedIn
+    case UnExpectedState
+}

@@ -43,6 +43,21 @@ public class MpcCoreKit {
     private let storeKey = "corekitStore"
     private let localstateKey = "localstate"
     private let customAuth: CustomAuth
+    
+    var status : CoreKitStatus {
+        get {
+            guard let requiredShares = try? self.tkey?.get_key_details().required_shares else {
+                return CoreKitStatus.NotInitialized
+            }
+            if requiredShares > 0 {
+                return CoreKitStatus.RequireFactor
+            }
+            if requiredShares == 0 {
+                return CoreKitStatus.LoggedIn
+            }
+            return CoreKitStatus.UnExpectedState
+        }
+    }
 
     public init(options: CoreKitWeb3AuthOptions) throws {
         if options.web3AuthClientId.isEmpty {
