@@ -66,9 +66,9 @@ extension MpcCoreKit {
         }
 
         let signingMessage = message.base64EncodedString()
-        let (s, r, v) = try! client.sign(message: signingMessage, hashOnly: true, original_message: "", precompute: precompute, signatures: signatures)
-
-        try! client.cleanup(signatures: signatures)
+        let (s, r, v) = try client.sign(message: signingMessage, hashOnly: true, original_message: "", precompute: precompute, signatures: signatures)
+        
+        try client.cleanup(signatures: signatures)
 
         return r.magnitude.serialize() + s.magnitude.serialize() + Data([v])
     }
