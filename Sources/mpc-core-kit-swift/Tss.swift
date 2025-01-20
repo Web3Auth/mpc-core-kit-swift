@@ -251,7 +251,7 @@ extension MpcCoreKit {
         }
 
         guard let verifier = verifier, let verifierId = verifierId, let tssEndpoints = tssEndpoints, let nodeIndexes = nodeIndexes,
-              let tssIndex = tssIndex, let tssPubKey = tssPubKey , let factorKey = factorKey else {
+              let tssIndex = tssShareIndex, let tssPubKey = tssPubKey , let factorKey = factorKey else {
             throw CoreKitError.invalidInput
             
         }

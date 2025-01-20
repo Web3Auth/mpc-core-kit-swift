@@ -16,7 +16,7 @@ public class MpcCoreKit {
     
     internal var selectedTag: String?
     internal var factorKey: String?
-    internal var tssIndex: String?
+    internal var tssShareIndex: String?
     internal var tssEndpoints: [String]?
     internal var tssPubKey: String?
 
@@ -82,7 +82,7 @@ public class MpcCoreKit {
         guard let factor = factorKey else {
             throw CoreKitError.factorKeyUnavailable
         }
-        guard let tssIndex = self.tssIndex else {
+        guard let tssIndex = self.tssShareIndex else {
             throw CoreKitError.factorKeyUnavailable
         }
         return FactorKeyData (factorKey: factor, tssIndex: tssIndex)
@@ -353,7 +353,7 @@ public class MpcCoreKit {
         let selectedTag = try TssModule.get_tss_tag(threshold_key: tkey)
         let (tssIndexStr, _) = try await TssModule.get_tss_share(threshold_key: tkey, tss_tag: selectedTag, factorKey: factorKey)
 
-        self.tssIndex = tssIndexStr
+        self.tssShareIndex = tssIndexStr
 
         // save as device factor if hashfactor is disable
         if option.disableHashedFactorKey == true {
@@ -364,7 +364,7 @@ public class MpcCoreKit {
     public func logout() async throws {
         // TODO: how to clear all state
         factorKey = nil
-        tssIndex = nil
+        tssShareIndex = nil
         signatures = nil
         tssEndpoints = nil
         tssPubKey = nil
@@ -408,7 +408,7 @@ public class MpcCoreKit {
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
         let (tssIndex, _) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey)
         self.factorKey = factorKey
-        self.tssIndex = tssIndex
+        self.tssShareIndex = tssIndex
     }
 
     public func getPubKey() async throws -> String {
