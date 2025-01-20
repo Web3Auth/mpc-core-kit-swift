@@ -1,81 +1,61 @@
-//
-//  File.swift
-//  
-//
-//  Created by CW Lee on 16/01/2024.
-//
-
-import Foundation
-import tssClientSwift
-import tkey
 import BigInt
-import curveSecp256k1
 import FetchNodeDetails
+import Foundation
 
-import SingleFactorAuth
+#if canImport(tkey)
+    import tkey
+#endif
 
+#if canImport(curveSecp256k1)
+    import curveSecp256k1
+#endif
 
-func convertPublicKeyFormat ( publicKey: String, outFormat: PublicKeyEncoding ) throws -> String {
-    let point = try KeyPoint(address: publicKey)
-    let result = try point.getPublicKey(format: outFormat)
-    return result
+#if canImport(tssClientSwift)
+    import tssClientSwift
+#endif
+
+public class FactorDescription: Codable {
+    public let module: FactorType
+    public let tssIndex: TssShareType
+    public let description: String?
+    public let dateAdded: Int
+
+    public init(module: FactorType, tssIndex: TssShareType, description: String?, dateAdded: Int) {
+        self.module = module
+        self.tssIndex = tssIndex
+        self.description = description
+        self.dateAdded = dateAdded
+    }
 }
 
-
-public func createCoreKitFactorDescription ( module: FactorDescriptionTypeModule, tssIndex: TssShareType, additional : [String:Any] = [:] ) -> [String: Any] {
-    var description = additional
-    
-    description["module"] = module.toString()
-    description["tssShareIndex"] = tssIndex.toString()
-    description["dateAdded"] = Date().timeIntervalSince1970
-    
-    return description
+public func createCoreKitFactorDescription(module: FactorType, tssIndex: TssShareType, dateAdded: Int, description: String? = nil) -> FactorDescription {
+    return FactorDescription(module: module, tssIndex: tssIndex, description: description, dateAdded: dateAdded)
 }
 
-func factorDescriptionToJsonStr ( dataObj: [String: Any]  ) throws -> String {
-    let json = try JSONSerialization.data(withJSONObject: dataObj)
+func factorDescriptionToJsonStr(dataObj: FactorDescription) throws -> String {
+    let json = try JSONEncoder().encode(dataObj)
     guard let jsonStr = String(data: json, encoding: .utf8) else {
-        throw "Invalid data structure"
+        throw CoreKitError.invalidResult
     }
     return jsonStr
 }
 
+// To remove reset account function
+public func resetAccount(coreKitInstance: MpcCoreKit) async throws {
+    guard let postboxKey = coreKitInstance.postboxKey else {
+        throw CoreKitError.notLoggedIn
+    }
 
-public func hashMessage(message: String) throws -> String {
-    return try TSSHelpers.hashMessage(message: message)
-}
+    guard let _ = coreKitInstance.metadataHostUrl else {
+        throw CoreKitError.invalidMetadataUrl
+    }
 
-public class MemoryStorage : ILocalStorage {
-    var memory : [String:Data] = [:]
-    
-    public func get(key: String) async throws -> Data {
-        guard let result = memory[key] else {
-            return Data()
-        }
-        return result
+    guard let tkey = coreKitInstance.tkey else {
+        throw CoreKitError.invalidTKey
     }
     
-    public func set(key: String, payload: Data) async throws {
-        memory.updateValue(payload, forKey: key)
-    }
-}
+    try await tkey.storage_layer_set_metadata(private_key: postboxKey, json: "{ \"message\": \"KEY_NOT_FOUND\" }")
 
-
-func convertWeb3AuthNetworkToTorusNetWork ( network: Web3AuthNetwork ) -> TorusNetwork {
-    switch network {
-    case Web3AuthNetwork.SAPPHIRE_DEVNET : return .sapphire(.SAPPHIRE_DEVNET);
-    case Web3AuthNetwork.SAPPHIRE_MAINNET : return .sapphire(.SAPPHIRE_MAINNET);
-    case Web3AuthNetwork.MAINNET : return .legacy(.MAINNET);
-    case Web3AuthNetwork.TESTNET: return .legacy(.TESTNET);
-    case Web3AuthNetwork.CYAN: return .legacy(.CYAN);
-    case Web3AuthNetwork.AQUA: return .legacy(.AQUA);
-    case Web3AuthNetwork.CELESTE: return .legacy(.CELESTE);
-    case Web3AuthNetwork.CUSTOM(_): return .sapphire(.SAPPHIRE_MAINNET);
-    }
-}
-
-public extension Web3AuthNetwork {
-    func toTorusNetwork () -> TorusNetwork{
-        return convertWeb3AuthNetworkToTorusNetWork(network: self)
-    }
+    // reset state
+    try await coreKitInstance.resetDeviceFactorStore()
 }
