@@ -47,17 +47,17 @@ public class MpcCoreKit {
     public func status() -> CoreKitStatus {
         
         guard let tkey = self.tkey else {
-            return CoreKitStatus.NotInitialized
+            return CoreKitStatus.notInitialized
         }
         
         do {
             if try tkey.get_key_details().required_shares > 0 {
-                return CoreKitStatus.RequireFactor
+                return CoreKitStatus.requireFactor
             }
             
-            return CoreKitStatus.LoggedIn
+            return CoreKitStatus.loggedIn
         } catch {
-            return CoreKitStatus.NotInitialized
+            return CoreKitStatus.notInitialized
         }
     }
 
@@ -319,12 +319,12 @@ public class MpcCoreKit {
 
         if option.disableHashedFactorKey == false {
             factorKey = hashFactorKey
-            descriptionTypeModule = FactorType.HashedShare
+            descriptionTypeModule = FactorType.hashedShare
 
         } else {
             // random generate
             factorKey = try curveSecp256k1.SecretKey().serialize()
-            descriptionTypeModule = FactorType.DeviceShare
+            descriptionTypeModule = FactorType.deviceShare
 
             // delete exisiting hashFactor backupshare if available
             try await deleteMetadataShareBackup(factorKey: hashFactorKey)

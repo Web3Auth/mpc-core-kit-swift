@@ -101,7 +101,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         let token = data
 
         let _ = try await coreKitInstance.loginWithJwt(verifier: verifier, verifierId: email, idToken: token)
-        try await resetAccount(coreKitInstance: coreKitInstance)
+        try await coreKitInstance.resetAccount()
     }
 
     // this test is testing account from mpc web
@@ -123,7 +123,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         let hash = try keccak256(data: Data(hexString: "010203040506")!)
         _ = try await coreKitInstance.tssSign(message: hash)
 
-        let newFactor = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: ["my": "mymy"])
+        let newFactor = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .deviceShare, additionalMetadata: ["my": "mymy"])
 
         let deleteFactorPub = try curveSecp256k1.SecretKey(hex: newFactor).toPublic().serialize(compressed: true)
         try await coreKitInstance.deleteFactor(deleteFactorPub: deleteFactorPub, deleteFactorKey: newFactor)
@@ -156,7 +156,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         XCTAssertEqual(keyDetails2.requiredFactors, 1)
 
         try await coreKitInstance2.inputFactorKey(factorKey: recoveryFactor)
-        _ = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare)
+        _ = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .deviceShare)
 
         let getKeyDetails = try await coreKitInstance2.getKeyDetails()
         XCTAssertEqual(getKeyDetails.requiredFactors, 0)
@@ -194,7 +194,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         print(sig)
         print(syncSig2)
         
-        let factor = try await coreKitInstance.createFactor(tssShareIndex: .recovery, factorKey: nil, factorDescription: .Other)
+        let factor = try await coreKitInstance.createFactor(tssShareIndex: .recovery, factorKey: nil, factorDescription: .other)
         print(factor)
         
         let syncSig3 = try coreKitInstance.tssSignSync(message: hash)

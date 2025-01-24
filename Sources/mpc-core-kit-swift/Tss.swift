@@ -145,7 +145,7 @@ extension MpcCoreKit {
         try TssModule.backup_share_with_factor_key(threshold_key: thresholdKey, shareIndex: shareIndex, factorKey: newFactor)
 
         // update description
-        let description = createCoreKitFactorDescription(module: FactorType.HashedShare, tssIndex: tssShareIndex, dateAdded: Int(Date().timeIntervalSince1970))
+        let description = createCoreKitFactorDescription(module: FactorType.hashedShare, tssIndex: tssShareIndex, dateAdded: Int(Date().timeIntervalSince1970))
         let jsonStr = try factorDescriptionToJsonStr(dataObj: description)
         let factorPub = try curveSecp256k1.SecretKey(hex: newFactor).toPublic().serialize(compressed: true)
         try await thresholdKey.add_share_description(key: factorPub, description: jsonStr)
@@ -228,7 +228,7 @@ extension MpcCoreKit {
         ]
         #endif
         
-        let deviceFactor = try await createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare, additionalMetadata: additionalDeviceMetadata)
+        let deviceFactor = try await createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .deviceShare, additionalMetadata: additionalDeviceMetadata)
 
         // store to device
         try await setDeviceFactor(factorKey: deviceFactor)
