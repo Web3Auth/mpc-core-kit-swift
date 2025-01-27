@@ -397,16 +397,25 @@ public class MpcCoreKit {
             throw CoreKitError.invalidFactorKey
         }
 
+        
         // input factor
-        try await threshold_key.input_factor_key(factorKey: factorKey)
+        if ( self.factorKey != nil) {
+            // test factorkey by trying to get tssShare
+            // validate currect Factorkey is valid and tkey is reconstructed
+            let _ = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: TssModule.get_tss_tag(threshold_key: threshold_key), factorKey: self.factorKey ?? "" );
+            
+        }else {
+            // if not existing factorKey, try input factor key by getting metadata share
+            try await threshold_key.input_factor_key(factorKey: factorKey)
+            // try using better methods ?
+            deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: threshold_key, factor_key: factorKey)
+            // setup tkey ( assuming only 2 factor is required)
+            let _ = try await threshold_key.reconstruct()
 
-        // try using better methods ?
-        deviceMetadataShareIndex = try await TssModule.find_device_share_index(threshold_key: threshold_key, factor_key: factorKey)
-
-        // setup tkey ( assuming only 2 factor is required)
-        let _ = try await threshold_key.reconstruct()
+        }
         let selectedTag = try TssModule.get_tss_tag(threshold_key: threshold_key)
-        let (tssIndex, _) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag, factorKey: factorKey)
+        // test factorkey by trying to get tssShare
+        let (tssIndex, _) = try await TssModule.get_tss_share(threshold_key: threshold_key, tss_tag: selectedTag , factorKey: factorKey)
         self.factorKey = factorKey
         self.tssShareIndex = tssIndex
     }
