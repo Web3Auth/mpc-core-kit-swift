@@ -48,6 +48,8 @@ func mockLogin(email: String) async throws -> Data {
     // verifier: "torus-key-test", scope: "email", extraPayload: { email }, alg: "ES256"
     let jsonObject: [String: Any] = [
         "verifier": "torus-test-health",
+        "iss" : "torus-key-test",
+        "emailVerified": true,
         "scope": email,
         "extraPayload": [
             "email": email,
@@ -130,7 +132,9 @@ final class mpc_kit_swiftTests: XCTestCase {
     }
 
     func testMFARecoveryFactor() async throws {
-        let verifierId = "testiosEmail11mfa11"
+        let manualSync = false 
+        
+        let verifierId = "testiosEmail11mfa11-1"
         let verifier = "torus-test-health"
         let clientId = "torus-test-health"
         let email = verifierId
@@ -138,7 +142,7 @@ final class mpc_kit_swiftTests: XCTestCase {
         // reset Account
         try await resetMPC(email: email, verifier: verifier, clientId: clientId)
         let memoryStorage = MemoryStorage()
-        let coreKitInstance = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: false, web3AuthNetwork: .SAPPHIRE_DEVNET, storage: memoryStorage, disableHashedFactorKey: false))
+        let coreKitInstance = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: manualSync, web3AuthNetwork: .SAPPHIRE_DEVNET, storage: memoryStorage, disableHashedFactorKey: false))
         let data = try mockLogin2(email: email)
         let token = data
 
@@ -146,8 +150,11 @@ final class mpc_kit_swiftTests: XCTestCase {
 
         let recoveryFactor = try await coreKitInstance.enableMFAWithRecoveryFactor()
 
+        if ( manualSync ) {
+            try await coreKitInstance.commitChanges()
+        }
         let memoryStorage2 = MemoryStorage()
-        let coreKitInstance2 = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: false, web3AuthNetwork: .SAPPHIRE_DEVNET, storage: memoryStorage2, disableHashedFactorKey: false))
+        let coreKitInstance2 = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: manualSync, web3AuthNetwork: .SAPPHIRE_DEVNET, storage: memoryStorage2, disableHashedFactorKey: false))
         let data2 = try mockLogin2(email: email)
         let token2 = data2
 
@@ -164,7 +171,57 @@ final class mpc_kit_swiftTests: XCTestCase {
         XCTAssertEqual(verifierId, email)
 
         let hash2 = try Data(hexString: "010203040506")!.sha3(varient: Variants.KECCAK256)
-        _ = try await coreKitInstance2.tssSign(message: hash2)
+        let signature = try await coreKitInstance2.tssSign(message: hash2)
+        print(signature)
+        
+    }
+    
+    
+    func testMFARecoveryFactorManualSync() async throws {
+        let manualSync = true
+        
+        let verifierId = "testiosEmail11mfa11-1"
+        let verifier = "torus-test-health"
+        let clientId = "torus-test-health"
+        let email = verifierId
+        
+        // reset Account
+        try await resetMPC(email: email, verifier: verifier, clientId: clientId)
+        let memoryStorage = MemoryStorage()
+        let coreKitInstance = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: manualSync, web3AuthNetwork: .SAPPHIRE_DEVNET, storage: memoryStorage, disableHashedFactorKey: false))
+        let data = try mockLogin2(email: email)
+        let token = data
+
+        let _ = try await coreKitInstance.loginWithJwt(verifier: verifier, verifierId: email, idToken: token)
+
+        let recoveryFactor = try await coreKitInstance.enableMFAWithRecoveryFactor()
+
+
+        if ( manualSync ) {
+            try await coreKitInstance.commitChanges()
+        }
+
+        let memoryStorage2 = MemoryStorage()
+        let coreKitInstance2 = try MpcCoreKit(options: CoreKitWeb3AuthOptions(web3AuthClientId: clientId, manualSync: manualSync, web3AuthNetwork: .SAPPHIRE_DEVNET, storage: memoryStorage2, disableHashedFactorKey: false))
+        let data2 = try mockLogin2(email: email)
+        let token2 = data2
+
+        let keyDetails2 = try await coreKitInstance2.loginWithJwt(verifier: verifier, verifierId: email, idToken: token2)
+
+        XCTAssertEqual(keyDetails2.requiredFactors, 1)
+
+        try await coreKitInstance2.inputFactorKey(factorKey: recoveryFactor)
+        _ = try await coreKitInstance.createFactor(tssShareIndex: .device, factorKey: nil, factorDescription: .DeviceShare)
+
+        let getKeyDetails = try await coreKitInstance2.getKeyDetails()
+        XCTAssertEqual(getKeyDetails.requiredFactors, 0)
+
+        XCTAssertEqual(verifierId, email)
+
+        let hash2 = try Data(hexString: "010203040506")!.sha3(varient: Variants.KECCAK256)
+        let signature = try await coreKitInstance2.tssSign(message: hash2)
+        print(signature)
+        
     }
     
     
