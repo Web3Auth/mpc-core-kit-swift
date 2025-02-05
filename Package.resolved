@@ -86,8 +86,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tkey/tkey-mpc-swift",
       "state" : {
-        "revision" : "74ea5301e316163b48e653ba107fd9edd4fe6bf8",
-        "version" : "4.0.2"
+        "branch" : "unfiltered_share_descriptions",
+        "revision" : "8ba15942dfecef421e5821ed3fdea1da0056be05"
       }
     },
     {

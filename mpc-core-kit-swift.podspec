@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "mpc-core-kit-swift"
-  spec.version      = "1.0.0"
+  spec.version      = "1.0.1"
   spec.platform = :ios, "14.0"
   spec.summary      = "Core Kit SDK"
   spec.homepage     = "https://web3auth.io/"

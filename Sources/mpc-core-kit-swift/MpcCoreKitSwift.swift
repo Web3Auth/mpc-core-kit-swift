@@ -344,7 +344,7 @@ public class MpcCoreKit {
         let description = createCoreKitFactorDescription(module: descriptionTypeModule, tssIndex: tssIndex, dateAdded: Int(Date().timeIntervalSince1970))
         let jsonStr = try factorDescriptionToJsonStr(dataObj: description)
         try await tkey.add_share_description(key: factorPub, description: jsonStr)
-
+        
         self.factorKey = factorKey
         deviceMetadataShareIndex = shareIndexes[0]
 
